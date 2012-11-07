@@ -1,14 +1,11 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.Change;
-import liquibase.change.ChangeMetaData;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.DatabaseFunction;
 import liquibase.statement.core.AddDefaultValueStatement;
 import liquibase.util.ISODateFormat;
-import liquibase.util.StringUtils;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -17,8 +14,10 @@ import java.util.Locale;
 /**
  * Sets a new default value to an existing column.
  */
+@DatabaseChange(name="addDefaultValue", description = "Add Default Value", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "column")
 public class AddDefaultValueChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private String columnName;
@@ -29,18 +28,25 @@ public class AddDefaultValueChange extends AbstractChange {
     private Boolean defaultValueBoolean;
     private DatabaseFunction defaultValueComputed;
 
-    public AddDefaultValueChange() {
-        super("addDefaultValue", "Add Default Value", ChangeMetaData.PRIORITY_DEFAULT);
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.catalog")
+    public String getCatalogName() {
+        return catalogName;
     }
 
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "column.relation")
     public String getTableName() {
         return tableName;
     }
@@ -49,6 +55,7 @@ public class AddDefaultValueChange extends AbstractChange {
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "column")
     public String getColumnName() {
         return columnName;
     }
@@ -113,11 +120,10 @@ public class AddDefaultValueChange extends AbstractChange {
         if (getDefaultValue() != null) {
             defaultValue = getDefaultValue();
         } else if (getDefaultValueBoolean() != null) {
-            defaultValue = Boolean.valueOf(getDefaultValueBoolean());
+            defaultValue = getDefaultValueBoolean();
         } else if (getDefaultValueNumeric() != null) {
             try {
-                defaultValue = NumberFormat.getInstance(Locale.US).
-                	parse(getDefaultValueNumeric()); 
+                defaultValue = NumberFormat.getInstance(Locale.US).parse(getDefaultValueNumeric());
             } catch (ParseException e) {
             	defaultValue = new DatabaseFunction(getDefaultValueNumeric());
             }
@@ -132,7 +138,7 @@ public class AddDefaultValueChange extends AbstractChange {
         }
         
         return new SqlStatement[]{
-                new AddDefaultValueStatement(getSchemaName(), getTableName(), getColumnName(), getColumnDataType(), defaultValue)
+                new AddDefaultValueStatement(getCatalogName(), getSchemaName(), getTableName(), getColumnName(), getColumnDataType(), defaultValue)
         };
     }
 

@@ -2,8 +2,11 @@ package liquibase.integration.ant;
 
 import liquibase.Liquibase;
 import liquibase.database.Database;
-import liquibase.diff.Diff;
+import liquibase.database.structure.Schema;
+import liquibase.diff.DiffControl;
 import liquibase.diff.DiffResult;
+import liquibase.diff.output.DiffOutputConfig;
+import liquibase.diff.output.DiffToChangeLog;
 import liquibase.exception.DatabaseException;
 import liquibase.logging.LogFactory;
 import liquibase.util.StringUtils;
@@ -17,9 +20,14 @@ public class DiffDatabaseTask extends BaseLiquibaseTask {
     private String referenceUrl;
     private String referenceUsername;
     private String referencePassword;
+    private String referenceDefaultCatalogName;
     private String referenceDefaultSchemaName;
     private String diffTypes;
     private String dataDir;
+    private boolean includeCatalog;
+    private boolean includeSchema;
+    private boolean includeTablespace;
+
 
     public String getDiffTypes() {
         return diffTypes;
@@ -69,12 +77,44 @@ public class DiffDatabaseTask extends BaseLiquibaseTask {
         this.referencePassword = referencePassword;
     }
 
+    public String getReferenceDefaultCatalogName() {
+        return referenceDefaultCatalogName;
+    }
+
+    public void setReferenceDefaultCatalogName(String referenceDefaultCatalogName) {
+        this.referenceDefaultCatalogName = referenceDefaultCatalogName;
+    }
+
     public String getReferenceDefaultSchemaName() {
         return referenceDefaultSchemaName;
     }
 
     public void setReferenceDefaultSchemaName(String referenceDefaultSchemaName) {
         this.referenceDefaultSchemaName = referenceDefaultSchemaName;
+    }
+
+    public boolean getIncludeCatalog() {
+        return includeCatalog;
+    }
+
+    public void setIncludeCatalog(boolean includeCatalog) {
+        this.includeCatalog = includeCatalog;
+    }
+
+    public boolean getIncludeSchema() {
+        return includeSchema;
+    }
+
+    public void setIncludeSchema(boolean includeSchema) {
+        this.includeSchema = includeSchema;
+    }
+
+    public boolean getIncludeTablespace() {
+        return includeTablespace;
+    }
+
+    public void setIncludeTablespace(boolean includeTablespace) {
+        this.includeTablespace = includeTablespace;
     }
 
     @Override
@@ -95,18 +135,17 @@ public class DiffDatabaseTask extends BaseLiquibaseTask {
 
             liquibase = createLiquibase();
 
-            referenceDatabase = createDatabaseObject(getReferenceDriver(), getReferenceUrl(), getReferenceUsername(), getReferencePassword(), getReferenceDefaultSchemaName(), getDatabaseClass());
+            referenceDatabase = createDatabaseObject(getReferenceDriver(), getReferenceUrl(), getReferenceUsername(), getReferencePassword(), getReferenceDefaultCatalogName(), getReferenceDefaultSchemaName(), getDatabaseClass());
 
 
-            Diff diff = new Diff(referenceDatabase, liquibase.getDatabase());
-            if (getDiffTypes() != null) {
-                diff.setDiffTypes(getDiffTypes());
-            }
+            DiffControl diffControl = new DiffControl(new DiffControl.SchemaComparison[]{
+                    new DiffControl.SchemaComparison(
+                            new Schema(getReferenceDefaultCatalogName(), getReferenceDefaultSchemaName()),
+                            new Schema(getDefaultCatalogName(), getDefaultSchemaName()))}, getDiffTypes());
+            diffControl.setDataDir(getDataDir());
+
+            DiffResult diffResult = liquibase.diff(referenceDatabase, liquibase.getDatabase(), diffControl);
 //            diff.addStatusListener(new OutDiffStatusListener());
-            DiffResult diffResult = diff.compare();
-            if (getDataDir() != null) {
-                diffResult.setDataDir(getDataDir());
-            }
 
             outputDiff(writer, diffResult, liquibase.getDatabase());
 
@@ -132,6 +171,6 @@ public class DiffDatabaseTask extends BaseLiquibaseTask {
     }
 
     protected void outputDiff(PrintStream writer, DiffResult diffResult, Database targetDatabase) throws Exception {
-        diffResult.printResult(writer);
+        new DiffToChangeLog(diffResult, new DiffOutputConfig(getIncludeCatalog(), getIncludeSchema(), getIncludeTablespace())).print(writer);
     }
 }

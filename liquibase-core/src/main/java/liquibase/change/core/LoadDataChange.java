@@ -18,8 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+@DatabaseChange(name="loadData", description = "Load Data", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "table")
 public class LoadDataChange extends AbstractChange implements ChangeWithColumns<LoadDataColumnConfig> {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private String file;
@@ -30,24 +32,25 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
 
     private List<LoadDataColumnConfig> columns = new ArrayList<LoadDataColumnConfig>();
 
-
-    public LoadDataChange() {
-        super("loadData", "Load Data", ChangeMetaData.PRIORITY_DEFAULT);
+    @DatabaseChangeProperty(mustApplyTo ="table.catalog")
+    public String getCatalogName() {
+        return catalogName;
     }
 
-    protected LoadDataChange(String changeName, String changeDescription)
-    {
-        super(changeName,changeDescription,ChangeMetaData.PRIORITY_DEFAULT);
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
+    @DatabaseChangeProperty(mustApplyTo ="table.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "table")
     public String getTableName() {
         return tableName;
     }
@@ -56,6 +59,7 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getFile() {
         return file;
     }
@@ -93,7 +97,7 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
     }
 
     public List<LoadDataColumnConfig> getColumns() {
-        return (List<LoadDataColumnConfig>) columns;
+        return columns;
     }
 
     public SqlStatement[] generateStatements(Database database) {
@@ -107,7 +111,7 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
             }
 
             List<SqlStatement> statements = new ArrayList<SqlStatement>();
-            String[] line = null;
+            String[] line;
             int lineNumber = 0;
 
             while ((line = reader.readNext()) != null) {
@@ -116,7 +120,7 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
                 if (line.length == 0 || (line.length == 1 && StringUtils.trimToNull(line[0]) == null)) {
                     continue; //nothing on this line
                 }
-                InsertStatement insertStatement = this.createStatement(getSchemaName(), getTableName());
+                InsertStatement insertStatement = this.createStatement(getCatalogName(), getSchemaName(), getTableName());
                 for (int i=0; i<headers.length; i++) {
                     String columnName = null;
                     if( i >= line.length ) {
@@ -128,6 +132,10 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
                     ColumnConfig columnConfig = getColumnConfig(i, headers[i]);
                     if (columnConfig != null) {
                         columnName = columnConfig.getName();
+
+                        if ("skip".equalsIgnoreCase(columnConfig.getType())) {
+                            continue;
+                        }
 
                         if (value.toString().equalsIgnoreCase("NULL")) {
                             value = "NULL";
@@ -144,7 +152,7 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
                             } else if (columnConfig.getType().equalsIgnoreCase("COMPUTED")) {
                                 valueConfig.setValue(value.toString());
                             } else {
-                                throw new UnexpectedLiquibaseException("loadData type of "+columnConfig.getType()+" is not supported.  Please use BOOLEAN, NUMERIC, DATE, STRING, or COMPUTED");
+                                throw new UnexpectedLiquibaseException("loadData type of "+columnConfig.getType()+" is not supported.  Please use BOOLEAN, NUMERIC, DATE, STRING, COMPUTED or SKIP");
                             }
                             value = valueConfig.getValueObject();
                         }
@@ -206,13 +214,11 @@ public class LoadDataChange extends AbstractChange implements ChangeWithColumns<
         	quotchar = this.quotchar.charAt(0);
         }
 
-        CSVReader reader = new CSVReader(streamReader, separator.charAt(0), quotchar );
-
-        return reader;
+        return new CSVReader(streamReader, separator.charAt(0), quotchar );
     }
 
-    protected InsertStatement createStatement(String schemaName, String tableName){
-        return new InsertStatement(schemaName,tableName);
+    protected InsertStatement createStatement(String catalogName, String schemaName, String tableName){
+        return new InsertStatement(catalogName, schemaName,tableName);
     }
 
     protected ColumnConfig getColumnConfig(int index, String header) {

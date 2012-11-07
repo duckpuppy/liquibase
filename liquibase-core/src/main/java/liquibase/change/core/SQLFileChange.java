@@ -1,8 +1,10 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractSQLChange;
-import liquibase.change.ChangeMetaData;
-import liquibase.change.CheckSum;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.exception.SetupException;
 import liquibase.exception.ValidationErrors;
@@ -11,8 +13,6 @@ import liquibase.logging.LogFactory;
 import liquibase.resource.ResourceAccessor;
 import liquibase.util.StreamUtil;
 import liquibase.util.StringUtils;
-
-import java.io.*;
 
 /**
  * Represents a Change for custom SQL stored in a File.
@@ -23,6 +23,7 @@ import java.io.*;
  * @link{#setFileOpener(FileOpener)} before calling setPath otherwise the
  * file will likely not be found.
  */
+@DatabaseChange(name="sqlFile", description = "SQL From File", priority = ChangeMetaData.PRIORITY_DEFAULT)
 public class SQLFileChange extends AbstractSQLChange {
 
     private String path;
@@ -30,10 +31,7 @@ public class SQLFileChange extends AbstractSQLChange {
     private Boolean relativeToChangelogFile;
 
 
-    public SQLFileChange() {
-        super("sqlFile", "SQL From File", ChangeMetaData.PRIORITY_DEFAULT);
-    }
-
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getPath() {
         return path;
     }
@@ -111,7 +109,7 @@ public class SQLFileChange extends AbstractSQLChange {
      */
     private boolean loadFromFileSystem(String file) throws SetupException {
         if (relativeToChangelogFile != null && relativeToChangelogFile) {
-            file = getChangeSet().getFilePath().replaceFirst("[^/]*$","")+file;
+            file = getChangeSet().getFilePath().replaceFirst("/[^/]*$", "") + "/" + file;
         }
 
         InputStream fis = null;
@@ -147,9 +145,9 @@ public class SQLFileChange extends AbstractSQLChange {
      * @param file The file name to try and find.
      * @return True if the file was found and loaded, false otherwise.
      */
-    private boolean loadFromClasspath(String file) throws SetupException {
+    private boolean loadFromClasspath(String file) {
         if (relativeToChangelogFile != null && relativeToChangelogFile) {
-            file = getChangeSet().getFilePath().replaceFirst("[^/]*$","")+file;
+            file = getChangeSet().getFilePath().replaceFirst("/[^/]*$", "") + "/" + file;
         }
 
         InputStream in = null;
@@ -178,21 +176,15 @@ public class SQLFileChange extends AbstractSQLChange {
         }
     }
 
-    /**
-     * Calculates an MD5 from the contents of the file.
-     *
-     * @see liquibase.change.AbstractChange#generateCheckSum()
-     */
-    @Override
-    public CheckSum generateCheckSum() {
-        String sql = getSql();
-        if (sql == null) {
-            sql = "";
-        }
-        return CheckSum.compute(sql);
-    }
-
     public String getConfirmationMessage() {
         return "SQL in file " + path + " executed";
+    }
+
+    @Override
+    public void setSql(String sql) {
+        if (getChangeLogParameters() != null) {
+            sql = getChangeLogParameters().expandExpressions(sql);
+        }
+        super.setSql(sql);
     }
 }

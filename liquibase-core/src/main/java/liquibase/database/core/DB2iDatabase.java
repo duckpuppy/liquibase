@@ -1,10 +1,6 @@
 package liquibase.database.core;
 
-import java.sql.Connection;
-
 import liquibase.database.DatabaseConnection;
-import liquibase.database.structure.type.DataType;
-import liquibase.database.structure.type.FloatType;
 import liquibase.exception.DatabaseException;
 
 public class DB2iDatabase extends DB2Database {
@@ -28,7 +24,12 @@ public class DB2iDatabase extends DB2Database {
     }
 
     @Override
-    public String getTypeName() {
+    protected String getDefaultDatabaseProductName() {
+        return "DB2i";
+    }
+
+    @Override
+    public String getShortName() {
         return "db2i";
     }
 }

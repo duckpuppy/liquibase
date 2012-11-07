@@ -2,6 +2,7 @@ package liquibase.sqlgenerator.core;
 
 import liquibase.database.Database;
 import liquibase.database.core.*;
+import liquibase.database.structure.Table;
 import liquibase.exception.ValidationErrors;
 import liquibase.sql.Sql;
 import liquibase.sql.UnparsedSql;
@@ -26,25 +27,25 @@ public class RenameTableGenerator extends AbstractSqlGenerator<RenameTableStatem
     public Sql[] generateSql(RenameTableStatement statement, Database database, SqlGeneratorChain sqlGeneratorChain) {
         String sql;
         if (database instanceof MSSQLDatabase) {
-            sql = "exec sp_rename '" + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + "', '" + statement.getNewTableName() + '\'';
+            sql = "exec sp_rename '" + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + "', '" + statement.getNewTableName() + '\'';
         } else if (database instanceof MySQLDatabase) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME " + database.escapeTableName(statement.getSchemaName(), statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getNewTableName());
         } else if (database instanceof PostgresDatabase) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else if (database instanceof SybaseASADatabase) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else if ((database instanceof DerbyDatabase) || (database instanceof MaxDBDatabase) || (database instanceof InformixDatabase)) {
-            sql = "RENAME TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "RENAME TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else if (database instanceof HsqlDatabase || database  instanceof H2Database) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else if (database instanceof OracleDatabase) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else if (database instanceof DB2Database) {
-            sql = "RENAME " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeDatabaseObject(statement.getNewTableName());//db2 doesn't allow specifying new schema name
+            sql = "RENAME " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);//db2 doesn't allow specifying new schema name
         } else if (database instanceof SQLiteDatabase) {
-            sql = "ALTER TABLE " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName());
+            sql = "ALTER TABLE " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " RENAME TO " + database.escapeDatabaseObject(statement.getNewTableName(), Table.class);
         } else {
-            sql = "RENAME " + database.escapeTableName(statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeTableName(statement.getSchemaName(), statement.getNewTableName());
+            sql = "RENAME " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getOldTableName()) + " TO " + database.escapeTableName(statement.getCatalogName(), statement.getSchemaName(), statement.getNewTableName());
         }
 
         return new Sql[] {

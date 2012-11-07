@@ -102,7 +102,7 @@ public class ChangeSet implements Conditional {
     private Set<String> contexts;
 
     /**
-     * Databases for which this changeset should run.  The string values should match the value returned from Database.getTypeName()
+     * Databases for which this changeset should run.  The string values should match the value returned from Database.getShortName()
      */
     private Set<String> dbmsSet;
 
@@ -354,7 +354,7 @@ public class ChangeSet implements Conditional {
                 try {
                     database.setAutoCommit(false);
                 } catch (DatabaseException e) {
-                    throw new MigrationFailedException(this, "Could not reset autocommit", e);
+                    throw new MigrationFailedException(this, "Could not resetInternalState autocommit", e);
                 }
             }
         }

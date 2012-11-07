@@ -8,7 +8,6 @@ import liquibase.exception.DatabaseException;
 import liquibase.servicelocator.LiquibaseService;
 import liquibase.sql.visitor.SqlVisitor;
 import liquibase.sqlgenerator.SqlGeneratorFactory;
-import liquibase.statement.CallableSqlStatement;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.*;
 import liquibase.util.StreamUtil;
@@ -56,10 +55,6 @@ public class LoggingExecutor extends AbstractExecutor implements Executor {
         return 0;
     }
 
-    public Map call(CallableSqlStatement csc, List declaredParameters, List<SqlVisitor> sqlVisitors) throws DatabaseException {
-        throw new DatabaseException("Do not know how to output callable statement");
-    }
-
     public void comment(String message) throws DatabaseException {
         try {
             output.write(database.getLineComment());
@@ -77,7 +72,7 @@ public class LoggingExecutor extends AbstractExecutor implements Executor {
 
     private void outputStatement(SqlStatement sql, List<SqlVisitor> sqlVisitors) throws DatabaseException {
         try {
-            if (SqlGeneratorFactory.getInstance().requiresCurrentDatabaseMetadata(sql, database)) {
+            if (SqlGeneratorFactory.getInstance().queriesDatabase(sql, database)) {
                 throw new DatabaseException(sql.getClass().getSimpleName()+" requires access to up to date database metadata which is not available in SQL output mode");
             }
             for (String statement : applyVisitors(sql, sqlVisitors)) {

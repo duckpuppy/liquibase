@@ -2,6 +2,7 @@ package liquibase.sqlgenerator.core;
 
 import liquibase.database.Database;
 import liquibase.database.core.SybaseDatabase;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.sql.Sql;
@@ -22,16 +23,14 @@ public class GetViewDefinitionGeneratorSybase extends GetViewDefinitionGenerator
 
     @Override
     public Sql[] generateSql(GetViewDefinitionStatement statement, Database database, SqlGeneratorChain sqlGeneratorChain) {
-        try {
-            String sql = "select text from syscomments where id = object_id('" +
-    			database.convertRequestedSchemaToSchema(statement.getSchemaName()) + "." +
-    			statement.getViewName() + "') order by colid";
-            
-            return new Sql[]{
-            	new UnparsedSql(sql)
-            };
-        } catch (DatabaseException e) {
-            throw new UnexpectedLiquibaseException(e);
-        }
+        Schema schema = database.correctSchema(new Schema(statement.getCatalogName(), statement.getSchemaName()));
+
+        String sql = "select text from syscomments where id = object_id('" +
+                schema.getName() + "." +
+                statement.getViewName() + "') order by colid";
+
+        return new Sql[]{
+                new UnparsedSql(sql)
+        };
     }
 }

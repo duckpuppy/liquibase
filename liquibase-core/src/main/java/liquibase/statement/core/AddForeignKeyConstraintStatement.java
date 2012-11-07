@@ -4,10 +4,12 @@ import liquibase.statement.AbstractSqlStatement;
 
 public class AddForeignKeyConstraintStatement extends AbstractSqlStatement {
 
+    private String baseTableCatalogName;
     private String baseTableSchemaName;
     private String baseTableName;
     private String baseColumnNames;
 
+    private String referencedTableCatalogName;
     private String referencedTableSchemaName;
     private String referencedTableName;
     private String referencedColumnNames;
@@ -20,18 +22,25 @@ public class AddForeignKeyConstraintStatement extends AbstractSqlStatement {
     private String onDelete;
     private String onUpdate;
 
-	// Some databases supports creation of FK with referention to column marked as unique, not primary
-	// If FK referenced to such unique column this option should be set to false
+	// Some databases supports creation of FK with references to column marked as unique, not primary
+	// If FK referenced to such unique column this option should be set to true
 	private boolean referencesUniqueColumn = false;
 
-    public AddForeignKeyConstraintStatement(String constraintName, String baseTableSchemaName, String baseTableName, String baseColumnNames, String referencedTableSchemaName, String referencedTableName, String referencedColumnNames) {
+    public AddForeignKeyConstraintStatement(String constraintName, String baseTableCatalogName, String baseTableSchemaName, String baseTableName, String baseColumnNames, String referencedTableCatalogName, String referencedTableSchemaName, String referencedTableName, String referencedColumnNames) {
+        this.baseTableCatalogName = baseTableCatalogName;
         this.baseTableSchemaName = baseTableSchemaName;
         this.baseTableName = baseTableName;
         this.baseColumnNames = baseColumnNames;
+
+        this.referencedTableCatalogName = referencedTableCatalogName;
         this.referencedTableSchemaName = referencedTableSchemaName;
         this.referencedTableName = referencedTableName;
         this.referencedColumnNames = referencedColumnNames;
         this.constraintName = constraintName;
+    }
+
+    public String getBaseTableCatalogName() {
+        return baseTableCatalogName;
     }
 
     public String getBaseTableSchemaName() {
@@ -44,6 +53,10 @@ public class AddForeignKeyConstraintStatement extends AbstractSqlStatement {
 
     public String getBaseColumnNames() {
         return baseColumnNames;
+    }
+
+    public String getReferencedTableCatalogName() {
+        return referencedTableCatalogName;
     }
 
     public String getReferencedTableSchemaName() {

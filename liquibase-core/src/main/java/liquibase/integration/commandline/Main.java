@@ -31,7 +31,9 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import liquibase.Liquibase;
+import liquibase.change.CheckSum;
 import liquibase.database.Database;
+import liquibase.diff.output.DiffOutputConfig;
 import liquibase.exception.CommandLineParsingException;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.ValidationFailedException;
@@ -59,6 +61,7 @@ public class Main {
     protected String url;
     protected String databaseClass;
     protected String defaultSchemaName;
+    protected String defaultCatalogName;
     protected String changeLogFile;
     protected String classpath;
     protected String contexts;
@@ -70,7 +73,7 @@ public class Main {
     protected String diffTypes;
     protected String changeSetAuthor;
     protected String changeSetContext;
-    protected String dataDir;
+    protected String dataOutputDirectory;
 
     protected String referenceDriver;
     protected String referenceUrl;
@@ -91,23 +94,23 @@ public class Main {
         try {
             String shouldRunProperty = System.getProperty(Liquibase.SHOULD_RUN_SYSTEM_PROPERTY);
             if (shouldRunProperty != null && !Boolean.valueOf(shouldRunProperty)) {
-                System.out.println("Liquibase did not run because '" + Liquibase.SHOULD_RUN_SYSTEM_PROPERTY + "' system property was set to false");
+                System.err.println("Liquibase did not run because '" + Liquibase.SHOULD_RUN_SYSTEM_PROPERTY + "' system property was set to false");
                 return;
             }
 
             Main main = new Main();
             if (args.length == 1 && "--help".equals(args[0])) {
-                main.printHelp(System.out);
+                main.printHelp(System.err);
                 return;
             } else if (args.length == 1 && "--version".equals(args[0])) {
-                System.out.println("Liquibase Version: " + LiquibaseUtil.getBuildVersion() + StreamUtil.getLineSeparator());
+                System.err.println("Liquibase Version: " + LiquibaseUtil.getBuildVersion() + StreamUtil.getLineSeparator());
                 return;
             }
 
             try {
                 main.parseOptions(args);
             } catch (CommandLineParsingException e) {
-                main.printHelp(Arrays.asList(e.getMessage()), System.out);
+                main.printHelp(Arrays.asList(e.getMessage()), System.err);
                 System.exit(-2);
             }
 
@@ -123,7 +126,7 @@ public class Main {
 
             List<String> setupMessages = main.checkSetup();
             if (setupMessages.size() > 0) {
-                main.printHelp(setupMessages, System.out);
+                main.printHelp(setupMessages, System.err);
                 return;
             }
 
@@ -141,25 +144,25 @@ public class Main {
                 }
 
                 if (e.getCause() instanceof ValidationFailedException) {
-                    ((ValidationFailedException) e.getCause()).printDescriptiveError(System.out);
+                    ((ValidationFailedException) e.getCause()).printDescriptiveError(System.err);
                 } else {
-                    System.out.println("Liquibase Update Failed: " + message);
+                    System.err.println("Liquibase Update Failed: " + message);
                     LogFactory.getLogger().severe(message, e);
-                    System.out.println(generateLogLevelWarningMessage());
+                    System.err.println(generateLogLevelWarningMessage());
                 }
                 System.exit(-1);
             }
 
             if ("update".equals(main.command)) {
-                System.out.println("Liquibase Update Successful");
+                System.err.println("Liquibase Update Successful");
             } else if (main.command.startsWith("rollback") && !main.command.endsWith("SQL")) {
-                System.out.println("Liquibase Rollback Successful");
+                System.err.println("Liquibase Rollback Successful");
             } else if (!main.command.endsWith("SQL")) {
-                System.out.println("Liquibase '"+main.command+"' Successful");
+                System.err.println("Liquibase '"+main.command+"' Successful");
             }
         } catch (Throwable e) {
             String message = "Unexpected error running Liquibase: " + e.getMessage();
-            System.out.println(message);
+            System.err.println(message);
             try {
                 LogFactory.getLogger().severe(message, e);
             } catch (Exception e1) {
@@ -215,13 +218,13 @@ public class Main {
             }
 
             if (isChangeLogRequired(command) && changeLogFile == null) {
-                messages.add("--changeLog is required");
+                messages.add("--changeLogFile is required");
             }
 
             if (isNoArgCommand(command) && !commandParams.isEmpty()) {
                 messages.add("unexpected command parameters: "+commandParams);
             } else {
-                checkForUnexpectedCommandParameter(messages);
+                validateCommandParameters(messages);
             }
         }
         return messages;
@@ -236,6 +239,7 @@ public class Main {
             || "rollbackSQL".equalsIgnoreCase(command)
             || "rollbackToDateSQL".equalsIgnoreCase(command)
             || "rollbackCountSQL".equalsIgnoreCase(command)
+            || "calculateCheckSum".equalsIgnoreCase(command)
             || "dbDoc".equalsIgnoreCase(command)
             || "tag".equalsIgnoreCase(command)) {
             
@@ -253,7 +257,10 @@ public class Main {
                     if (!cmdParm.startsWith("--referenceUsername")
                         && !cmdParm.startsWith("--referencePassword")
                         && !cmdParm.startsWith("--referenceDriver")
-                        && !cmdParm.startsWith("--referenceUrl")) {
+                            && !cmdParm.startsWith("--includeSchema")
+                            && !cmdParm.startsWith("--includeCatalog")
+                            && !cmdParm.startsWith("--includeTablespace")
+                            && !cmdParm.startsWith("--referenceUrl")) {
                         messages.add("unexpected command parameters: "+commandParams);
                     }
                 }
@@ -262,10 +269,45 @@ public class Main {
         
     }
 
+    private void validateCommandParameters(final List<String> messages) {
+        checkForUnexpectedCommandParameter(messages);
+        checkForMissingCommandParameters(messages);
+        checkForMalformedCommandParameters(messages);
+    }
+
+    private void checkForMissingCommandParameters(final List<String> messages) {
+        if (commandParams.isEmpty() || commandParams.iterator().next().startsWith("-")) {
+            if ("calculateCheckSum".equalsIgnoreCase(command)) {
+                messages.add("missing changeSet identifier");
+            }
+        }
+    }
+
+    private void checkForMalformedCommandParameters(final List<String> messages) {
+      if (!commandParams.isEmpty()) {
+        if ("calculateCheckSum".equalsIgnoreCase(command)) {
+          for (final String param : commandParams) {
+            assert param != null;
+            if (param != null && !param.startsWith("-")) {
+              final String[] parts = param.split("::");
+              if (parts == null || parts.length < 3) {
+                messages.add("changeSet identifier must be of the form filepath::id::author");
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
     private boolean isChangeLogRequired(String command) {
         return command.toLowerCase().startsWith("update")
                 || command.toLowerCase().startsWith("rollback")
-                || "validate".equals(command);
+                || "calculateCheckSum".equalsIgnoreCase(command)
+                || "status".equalsIgnoreCase(command)
+                || "validate".equalsIgnoreCase(command)
+                || "changeLogSync".equalsIgnoreCase(command)
+                || "changeLogSyncSql".equalsIgnoreCase(command);
     }
 
     private boolean isCommand(String arg) {
@@ -282,6 +324,7 @@ public class Main {
                 || "rollbackToDateSQL".equalsIgnoreCase(arg)
                 || "rollbackCountSQL".equalsIgnoreCase(arg)
                 || "futureRollbackSQL".equalsIgnoreCase(arg)
+                || "futureRollbackCountSQL".equalsIgnoreCase(arg)
                 || "updateTestingRollback".equalsIgnoreCase(arg)
                 || "tag".equalsIgnoreCase(arg)
                 || "listLocks".equalsIgnoreCase(arg)
@@ -293,6 +336,7 @@ public class Main {
                 || "diff".equalsIgnoreCase(arg)
                 || "diffChangeLog".equalsIgnoreCase(arg)
                 || "generateChangeLog".equalsIgnoreCase(arg)
+                || "calculateCheckSum".equalsIgnoreCase(arg)
                 || "clearCheckSums".equalsIgnoreCase(arg)
                 || "dbDoc".equalsIgnoreCase(arg)
                 || "changelogSync".equalsIgnoreCase(arg)
@@ -313,7 +357,6 @@ public class Main {
                     || "releaseLocks".equalsIgnoreCase(arg)
                     || "validate".equalsIgnoreCase(arg)
                     || "help".equalsIgnoreCase(arg)
-                    || "generateChangeLog".equalsIgnoreCase(arg)
                     || "clearCheckSums".equalsIgnoreCase(arg)
                     || "changelogSync".equalsIgnoreCase(arg)
                     || "changelogSyncSQL".equalsIgnoreCase(arg)
@@ -379,7 +422,7 @@ public class Main {
         stream.println(" updateSQL                      Writes SQL to update database to current");
         stream.println("                                version to STDOUT");
         stream.println(" updateCount <num>              Applies next NUM changes to the database");
-        stream.println(" updateSQL <num>                Writes SQL to apply next NUM changes");
+        stream.println(" updateCountSQL <num>           Writes SQL to apply next NUM changes");
         stream.println("                                to the database");
         stream.println(" rollback <tag>                 Rolls back the database to the the state is was");
         stream.println("                                when the tag was applied");
@@ -388,7 +431,7 @@ public class Main {
         stream.println("                                to STDOUT");
         stream.println(" rollbackToDate <date/time>     Rolls back the database to the the state is was");
         stream.println("                                at the given date/time.");
-        stream.println("                                Date Format: yyyy-MM-dd HH:mm:ss");
+        stream.println("                                Date Format: yyyy-MM-dd'T'HH:mm:ss");
         stream.println(" rollbackToDateSQL <date/time>  Writes SQL to roll back the database to that");
         stream.println("                                state it was in at the given date/time version");
         stream.println("                                to STDOUT");
@@ -399,6 +442,9 @@ public class Main {
         stream.println("                                applied to the database");
         stream.println(" futureRollbackSQL              Writes SQL to roll back the database to the ");
         stream.println("                                current state after the changes in the ");
+        stream.println("                                changeslog have been applied");
+        stream.println(" futureRollbackSQL <value>      Writes SQL to roll back the database to the ");
+        stream.println("                                current state after <value> changes in the ");
         stream.println("                                changeslog have been applied");
         stream.println(" updateTestingRollback          Updates database, then rolls back changes before");
         stream.println("                                updating again. Useful for testing");
@@ -421,6 +467,8 @@ public class Main {
         stream.println(" tag <tag string>          'Tags' the current database state for future rollback");
         stream.println(" status [--verbose]        Outputs count (list if --verbose) of unrun changesets");
         stream.println(" validate                  Checks changelog for errors");
+        stream.println(" calculateCheckSum <id>    Calculates and prints a checksum for the changeset");
+        stream.println("                           with the given id in the format filepath::id::author.");
         stream.println(" clearCheckSums            Removes all saved checksums from database log.");
         stream.println("                           Useful for 'MD5Sum Check Failed' errors");
         stream.println(" changelogSync             Mark all changes as executed in the database");
@@ -685,7 +733,7 @@ public class Main {
 
     protected void doMigration() throws Exception {
         if ("help".equalsIgnoreCase(command)) {
-            printHelp(System.out);
+            printHelp(System.err);
             return;
         }
 
@@ -702,21 +750,25 @@ public class Main {
         FileSystemResourceAccessor fsOpener = new FileSystemResourceAccessor();
         CommandLineResourceAccessor clOpener = new CommandLineResourceAccessor(classLoader);
         Database database = CommandLineUtils.createDatabaseObject(classLoader, this.url, 
-            this.username, this.password, this.driver, this.defaultSchemaName, 
-            this.databaseClass, this.driverPropertiesFile);
+            this.username, this.password, this.driver, this.defaultCatalogName,this.defaultSchemaName, this.databaseClass, this.driverPropertiesFile);
         try {
 
 
             CompositeResourceAccessor fileOpener = new CompositeResourceAccessor(fsOpener, clOpener);
 
+            boolean includeCatalog = Boolean.parseBoolean(getCommandParam("includeCatalog", "false"));
+            boolean includeSchema = Boolean.parseBoolean(getCommandParam("includeSchema", "false"));
+            boolean includeTablespace = Boolean.parseBoolean(getCommandParam("includeTablespace", "false"));
+            DiffOutputConfig diffOutputConfig = new DiffOutputConfig(includeCatalog, includeSchema, includeTablespace);
+
             if ("diff".equalsIgnoreCase(command)) {
                 CommandLineUtils.doDiff(createReferenceDatabaseFromCommandParams(commandParams), database);
                 return;
             } else if ("diffChangeLog".equalsIgnoreCase(command)) {
-                CommandLineUtils.doDiffToChangeLog(changeLogFile, createReferenceDatabaseFromCommandParams(commandParams), database);
+                CommandLineUtils.doDiffToChangeLog(changeLogFile, createReferenceDatabaseFromCommandParams(commandParams), database, diffOutputConfig);
                 return;
             } else if ("generateChangeLog".equalsIgnoreCase(command)) {
-                CommandLineUtils.doGenerateChangeLog(changeLogFile, database, defaultSchemaName, StringUtils.trimToNull(diffTypes), StringUtils.trimToNull(changeSetAuthor), StringUtils.trimToNull(changeSetContext), StringUtils.trimToNull(dataDir));
+                CommandLineUtils.doGenerateChangeLog(changeLogFile, database, defaultSchemaName, defaultCatalogName, StringUtils.trimToNull(diffTypes), StringUtils.trimToNull(changeSetAuthor), StringUtils.trimToNull(changeSetContext), StringUtils.trimToNull(dataOutputDirectory), diffOutputConfig);
                 return;
             }
 
@@ -728,19 +780,19 @@ public class Main {
             }
 
             if ("listLocks".equalsIgnoreCase(command)) {
-                liquibase.reportLocks(System.out);
+                liquibase.reportLocks(System.err);
                 return;
             } else if ("releaseLocks".equalsIgnoreCase(command)) {
                 LockService.getInstance(database).forceReleaseLock();
-                System.out.println("Successfully released all database change log locks for " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
+                System.err.println("Successfully released all database change log locks for " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
                 return;
             } else if ("tag".equalsIgnoreCase(command)) {
                 liquibase.tag(commandParams.iterator().next());
-                System.out.println("Successfully tagged " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
+                System.err.println("Successfully tagged " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
                 return;
             } else if ("dropAll".equals(command)) {
                 liquibase.dropAll();
-                System.out.println("All objects dropped from " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
+                System.err.println("All objects dropped from " + liquibase.getDatabase().getConnection().getConnectionUserName() + "@" + liquibase.getDatabase().getConnection().getURL());
                 return;
             } else if ("status".equalsIgnoreCase(command)) {
                 boolean runVerbose = false;
@@ -754,13 +806,18 @@ public class Main {
                 try {
                     liquibase.validate();
                 } catch (ValidationFailedException e) {
-                    e.printDescriptiveError(System.out);
+                    e.printDescriptiveError(System.err);
                     return;
                 }
-                System.out.println("No validation errors found");
+                System.err.println("No validation errors found");
                 return;
             } else if ("clearCheckSums".equalsIgnoreCase(command)) {
                 liquibase.clearCheckSums();
+                return;
+            } else if ("calculateCheckSum".equalsIgnoreCase(command)) {
+                CheckSum checkSum = null;
+                checkSum = liquibase.calculateCheckSum(commandParams.iterator().next());
+                System.out.println(checkSum);
                 return;
             } else if ("dbdoc".equalsIgnoreCase(command)) {
                 if (commandParams.size() == 0) {
@@ -822,6 +879,12 @@ public class Main {
                     liquibase.rollback(Integer.parseInt(commandParams.iterator().next()), contexts, getOutputWriter());
                 } else if ("futureRollbackSQL".equalsIgnoreCase(command)) {
                     liquibase.futureRollbackSQL(contexts, getOutputWriter());
+                } else if ("futureRollbackCountSQL".equalsIgnoreCase(command)) {
+                    if (commandParams == null || commandParams.size() == 0) {
+                        throw new CommandLineParsingException("futureRollbackCountSQL requires a rollback count");
+                    }
+
+                    liquibase.futureRollbackSQL(Integer.parseInt(commandParams.iterator().next()), contexts, getOutputWriter());
                 } else if ("updateTestingRollback".equalsIgnoreCase(command)) {
                     liquibase.updateTestingRollback(contexts);
                 } else {
@@ -840,7 +903,7 @@ public class Main {
         }
     }
 
-    private String getCommandParam(String paramName) throws CommandLineParsingException {
+    private String getCommandParam(String paramName, String defaultValue) throws CommandLineParsingException {
         for (String param : commandParams) {
             String[] splitArg = splitArg(param);
 
@@ -851,7 +914,7 @@ public class Main {
             }
         }
 
-        return null;
+        return defaultValue;
     }
 
     private Database createReferenceDatabaseFromCommandParams(Set<String> commandParams) throws CommandLineParsingException, DatabaseException {
@@ -860,6 +923,7 @@ public class Main {
         String username = referenceUsername;
         String password = referencePassword;
         String defaultSchemaName = this.defaultSchemaName;
+        String defaultCatalogName = this.defaultCatalogName;
 
         for (String param : commandParams) {
             String[] splitArg = splitArg(param);
@@ -874,10 +938,12 @@ public class Main {
                 username = value;
             } else if ("referencePassword".equalsIgnoreCase(attributeName)) {
                 password = value;
+            } else if ("referenceDefaultCatalogName".equalsIgnoreCase(attributeName)) {
+                defaultCatalogName = value;
             } else if ("referenceDefaultSchemaName".equalsIgnoreCase(attributeName)) {
                 defaultSchemaName = value;
             } else if ("dataOutputDirectory".equalsIgnoreCase(attributeName)) {
-                dataDir = value;
+                dataOutputDirectory = value;
             }
         }
 
@@ -889,7 +955,7 @@ public class Main {
             throw new CommandLineParsingException("referenceUrl parameter missing");
         }
 
-        return CommandLineUtils.createDatabaseObject(classLoader, url, username, password, driver, defaultSchemaName, null, null);
+        return CommandLineUtils.createDatabaseObject(classLoader, url, username, password, driver, defaultCatalogName, defaultSchemaName, null, null);
 //        Driver driverObject;
 //        try {
 //            driverObject = (Driver) Class.forName(driver, true, classLoader).newInstance();
@@ -918,7 +984,7 @@ public class Main {
     }
 
     private Writer getOutputWriter() {
-        return new OutputStreamWriter(System.out);
+        return new OutputStreamWriter(System.err);
     }
 
     public boolean isWindows() {

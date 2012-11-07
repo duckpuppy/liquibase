@@ -17,8 +17,8 @@ import liquibase.database.core.PostgresDatabase;
 import liquibase.database.core.SQLiteDatabase;
 import liquibase.database.core.SybaseASADatabase;
 import liquibase.database.core.SybaseDatabase;
-import liquibase.database.structure.type.IntType;
-import liquibase.database.typeconversion.TypeConverterFactory;
+import liquibase.datatype.DataTypeFactory;
+import liquibase.datatype.core.IntType;
 import liquibase.sql.Sql;
 import liquibase.sqlgenerator.AbstractSqlGeneratorTest;
 import liquibase.statement.AutoIncrementConstraint;
@@ -30,6 +30,7 @@ import org.junit.Test;
 public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTableStatement> {
 
     protected static final String TABLE_NAME = "TABLE_NAME";
+    protected static final String CATALOG_NAME = "CATALOG_NAME";
     protected static final String SCHEMA_NAME = "SCHEMA_NAME";
 
     protected static final String COLUMN_NAME1 = "COLUMN1_NAME";
@@ -40,7 +41,7 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
 
     @Override
     protected CreateTableStatement createSampleSqlStatement() {
-        CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+        CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
         statement.addColumn(COLUMN_NAME1, new IntType());
         return statement;
     }
@@ -49,10 +50,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testWithColumnWithDefaultValue() {
         for (Database database : TestContext.getInstance().getAllDatabases()) {
             if (database instanceof OracleDatabase) {
-                CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
-                statement.addColumn(COLUMN_NAME1, TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("java.sql.Types.TIMESTAMP", false), new ColumnConfig().setDefaultValue("null").getDefaultValueObject());
+                CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
+                statement.addColumn(COLUMN_NAME1, DataTypeFactory.getInstance().fromDescription("java.sql.Types.TIMESTAMP"), new ColumnConfig().setDefaultValue("null").getDefaultValueObject());
                 if (shouldBeImplementation(database)) {
-                    assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME TIMESTAMP DEFAULT null)", this.generatorUnderTest.generateSql(statement, database, null)[0].toSql());
+                    assertEquals("CREATE TABLE CATALOG_NAME.TABLE_NAME (COLUMN1_NAME TIMESTAMP DEFAULT null)", this.generatorUnderTest.generateSql(statement, database, null)[0].toSql());
                 }
             }
         }
@@ -61,11 +62,11 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     @Test
     public void testWithColumnSpecificIntType() {
         for (Database database : TestContext.getInstance().getAllDatabases()) {
-                CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
-                statement.addColumn(COLUMN_NAME1, TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("int(11) unsigned", false));
+                CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
+                statement.addColumn(COLUMN_NAME1, DataTypeFactory.getInstance().fromDescription("int(11) unsigned"));
 
             if (database instanceof MySQLDatabase) {
-                assertEquals("CREATE TABLE `SCHEMA_NAME`.`TABLE_NAME` (`COLUMN1_NAME` INT(11) unsigned)", this.generatorUnderTest.generateSql(statement, database, null)[0].toSql());
+                assertEquals("CREATE TABLE `CATALOG_NAME`.`TABLE_NAME` (`COLUMN1_NAME` INT(11) unsigned NULL)", this.generatorUnderTest.generateSql(statement, database, null)[0].toSql());
             }
         }
     }
@@ -370,10 +371,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementDB2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DB2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
@@ -388,10 +389,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithDB2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DB2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, null)
 	    		);
     		
@@ -406,10 +407,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByDB2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DB2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, BigInteger.TEN)
 	    		);
 	    		
@@ -424,16 +425,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementDerbyDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DerbyDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -442,16 +443,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithDerbyDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DerbyDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, null)
 	    		);
     		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0))", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0))", generatedSql[0].toSql());
     		}
     	}
     }
@@ -460,16 +461,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByDerbyDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof DerbyDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	
-				assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0, INCREMENT BY 10))", generatedSql[0].toSql());
+				assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0, INCREMENT BY 10))", generatedSql[0].toSql());
     		}
     	}
     }    
@@ -478,16 +479,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementH2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof H2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -496,16 +497,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithH2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof H2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, null)
 	    		);
     		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0))", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0))", generatedSql[0].toSql());
     		}
     	}
     }
@@ -514,16 +515,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByH2Database() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof H2Database) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	
-				assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0, INCREMENT BY 10))", generatedSql[0].toSql());
+				assertEquals("CREATE TABLE CATALOG_NAME.SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGINT GENERATED BY DEFAULT AS IDENTITY (START WITH 0, INCREMENT BY 10))", generatedSql[0].toSql());
     		}
     	}
     }    
@@ -532,10 +533,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementHsqlDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof HsqlDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
@@ -550,10 +551,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithHsqlDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof HsqlDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ONE, null)
 	    		);
     		
@@ -568,10 +569,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByHsqlDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof HsqlDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ONE, BigInteger.TEN)
 	    		);
 	    		
@@ -586,16 +587,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementMSSQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MSSQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -604,16 +605,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithMSSQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MSSQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, null)
 	    		);
     		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY (0))", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY (0))", generatedSql[0].toSql());
     		}
     	}
     }
@@ -622,16 +623,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByMSSQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MSSQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	
-				assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY (0, 10))", generatedSql[0].toSql());
+				assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY (0, 10))", generatedSql[0].toSql());
     		}
     	}
     }    
@@ -640,16 +641,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementMySQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MySQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE `SCHEMA_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE `CATALOG_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -658,16 +659,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithMySQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MySQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), null)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE `SCHEMA_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT=2)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE `CATALOG_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT=2 NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -676,17 +677,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByMySQLDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof MySQLDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	    		
 	    		// increment by not supported by MySQL
-    			assertEquals("CREATE TABLE `SCHEMA_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT=2)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE `CATALOG_NAME`.`TABLE_NAME` (`COLUMN1_NAME` BIGINT AUTO_INCREMENT=2 NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -695,16 +696,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementPostgresDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof PostgresDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME bigserial)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGSERIAL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -713,17 +714,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithPostgresDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof PostgresDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, null)
 	    		);
     		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
 	    		// start with supported over generated sequence
-    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME bigserial)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGSERIAL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -732,17 +733,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementByPostgresDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof PostgresDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.ZERO, BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	
 	    		// start with and increment by supported over generated sequence
-				assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME bigserial)", generatedSql[0].toSql());
+				assertEquals("CREATE TABLE SCHEMA_NAME.TABLE_NAME (COLUMN1_NAME BIGSERIAL)", generatedSql[0].toSql());
     		}
     	}
     }     
@@ -751,10 +752,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementSQLiteDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SQLiteDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
@@ -769,10 +770,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithSQLiteDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SQLiteDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), null)
 	    		);
 	    		
@@ -788,10 +789,10 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementBySQLiteDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SQLiteDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), BigInteger.TEN)
 	    		);
 	    		
@@ -807,16 +808,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementSybaseASADatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseASADatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE \"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE \"CATALOG_NAME\".\"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -825,17 +826,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithSybaseASADatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseASADatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), null)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
 	    		// start with not supported by SybaseASA
-    			assertEquals("CREATE TABLE \"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE \"CATALOG_NAME\".\"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -844,17 +845,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementBySybaseASADatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseASADatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	    		
 	    		// start with and increment by not supported by SybaseASA
-    			assertEquals("CREATE TABLE \"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE \"CATALOG_NAME\".\"SCHEMA_NAME\".\"TABLE_NAME\" (\"COLUMN1_NAME\" BIGINT DEFAULT AUTOINCREMENT NULL)", generatedSql[0].toSql());
     		}
     	}
     }    
@@ -863,16 +864,16 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementSybaseDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
-    			assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -881,17 +882,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithSybaseDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), null)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
     		
 	    		// start with not supported by Sybase
-    			assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
     		}
     	}
     }
@@ -900,17 +901,17 @@ public class CreateTableGeneratorTest extends AbstractSqlGeneratorTest<CreateTab
     public void testAutoIncrementStartWithIncrementBySybaseDatabase() throws Exception {
     	for (Database database : TestContext.getInstance().getAllDatabases()) {
     		if (database instanceof SybaseDatabase) {
-	    		CreateTableStatement statement = new CreateTableStatement(SCHEMA_NAME, TABLE_NAME);
+	    		CreateTableStatement statement = new CreateTableStatement(CATALOG_NAME, SCHEMA_NAME, TABLE_NAME);
 	    		statement.addColumn(
 	    			COLUMN_NAME1,
-	    			TypeConverterFactory.getInstance().findTypeConverter(database).getDataType("BIGINT", true),
+	    			DataTypeFactory.getInstance().fromDescription("BIGINT{autoIncrement:true}"),
 	    			new AutoIncrementConstraint(COLUMN_NAME1, BigInteger.valueOf(2), BigInteger.TEN)
 	    		);
 	    		
 	    		Sql[] generatedSql = this.generatorUnderTest.generateSql(statement, database, null);
 	    		
 	    		// start with and increment by not supported by Sybase
-    			assertEquals("CREATE TABLE [SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
+    			assertEquals("CREATE TABLE [CATALOG_NAME].[SCHEMA_NAME].[TABLE_NAME] ([COLUMN1_NAME] BIGINT IDENTITY NULL)", generatedSql[0].toSql());
     		}
     	}
     } 

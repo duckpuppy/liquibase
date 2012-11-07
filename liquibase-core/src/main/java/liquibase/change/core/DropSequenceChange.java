@@ -1,32 +1,41 @@
 package liquibase.change.core;
 
 import liquibase.change.AbstractChange;
+import liquibase.change.DatabaseChange;
 import liquibase.change.ChangeMetaData;
+import liquibase.change.DatabaseChangeProperty;
 import liquibase.database.Database;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.DropSequenceStatement;
-import liquibase.util.StringUtils;
 
 /**
  * Drops an existing sequence.
  */
+@DatabaseChange(name="dropSequence", description = "Drop Sequence", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "sequence")
 public class DropSequenceChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String sequenceName;
 
-    public DropSequenceChange() {
-        super("dropSequence", "Drop Sequence", ChangeMetaData.PRIORITY_DEFAULT);
+    public String getCatalogName() {
+        return catalogName;
     }
 
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="sequence.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "sequence")
     public String getSequenceName() {
         return sequenceName;
     }
@@ -36,7 +45,7 @@ public class DropSequenceChange extends AbstractChange {
     }
 
     public SqlStatement[] generateStatements(Database database) {
-        return new SqlStatement[]{new DropSequenceStatement(getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), getSequenceName())};
+        return new SqlStatement[]{new DropSequenceStatement(getCatalogName(), getSchemaName(), getSequenceName())};
     }
 
     public String getConfirmationMessage() {

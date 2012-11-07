@@ -44,6 +44,7 @@ public class BaseLiquibaseTask extends Task {
     private String currentDateTimeFunction;
     private String contexts;
     private String outputFile;
+    private String defaultCatalogName;
     private String defaultSchemaName;
     private String databaseClass;
     private String databaseChangeLogTableName;
@@ -156,6 +157,14 @@ public class BaseLiquibaseTask extends Task {
         return new PrintStream(new File(getOutputFile()));
     }
 
+    public String getDefaultCatalogName() {
+        return defaultCatalogName;
+    }
+
+    public void setDefaultCatalogName(String defaultCatalogName) {
+        this.defaultCatalogName = defaultCatalogName;
+    }
+
     public String getDefaultSchemaName() {
         return defaultSchemaName;
     }
@@ -172,7 +181,7 @@ public class BaseLiquibaseTask extends Task {
         ResourceAccessor antFO = new AntResourceAccessor(getProject(), classpath);
         ResourceAccessor fsFO = new FileSystemResourceAccessor();
 
-        Database database = createDatabaseObject(getDriver(), getUrl(), getUsername(), getPassword(), getDefaultSchemaName(), getDatabaseClass());
+        Database database = createDatabaseObject(getDriver(), getUrl(), getUsername(), getPassword(), getDefaultCatalogName(), getDefaultSchemaName(), getDatabaseClass());
 
         String changeLogFile = null;
         if (getChangeLogFile() != null) {
@@ -191,6 +200,7 @@ public class BaseLiquibaseTask extends Task {
                                             String databaseUrl,
                                             String username,
                                             String password,
+                                            String defaultCatalogName,
                                             String defaultSchemaName,
                                             String databaseClass) throws Exception {
         String[] strings = classpath.list();
@@ -242,6 +252,7 @@ public class BaseLiquibaseTask extends Task {
         }
 
         database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
+        database.setDefaultCatalogName(defaultCatalogName);
         database.setDefaultSchemaName(defaultSchemaName);
 
         if (getDatabaseChangeLogTableName() != null)

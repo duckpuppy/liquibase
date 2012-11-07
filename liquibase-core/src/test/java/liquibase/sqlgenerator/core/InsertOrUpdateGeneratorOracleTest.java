@@ -14,13 +14,13 @@ public class InsertOrUpdateGeneratorOracleTest {
     public void ContainsInsertStatement(){
         OracleDatabase database = new OracleDatabase();
         InsertOrUpdateGeneratorOracle generator = new InsertOrUpdateGeneratorOracle();
-        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("myschema","mytable","pk_col1");
+        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("mycatalog", "myschema","mytable","pk_col1");
         statement.addColumnValue("pk_col1","value1");
         statement.addColumnValue("col2","value2");
         Sql[] sql = generator.generateSql( statement, database,  null);
         String theSql = sql[0].toSql();
-        assertTrue(theSql.contains("INSERT INTO myschema.mytable (col2, pk_col1) VALUES ('value2', 'value1');"));
-        assertTrue(theSql.contains("UPDATE myschema.mytable"));
+        assertTrue(theSql.contains("INSERT INTO mycatalog.mytable (col2, pk_col1) VALUES ('value2', 'value1');"));
+        assertTrue(theSql.contains("UPDATE mycatalog.mytable"));
         String[] sqlLines = theSql.split("\n");
         int lineToCheck = 0;
         assertEquals("DECLARE",sqlLines[lineToCheck].trim());
@@ -29,15 +29,15 @@ public class InsertOrUpdateGeneratorOracleTest {
         lineToCheck++;
         assertEquals("BEGIN",sqlLines[lineToCheck].trim());
         lineToCheck++;
-        assertEquals("SELECT COUNT(*) INTO v_reccount FROM myschema.mytable WHERE pk_col1 = 'value1';",sqlLines[lineToCheck].trim());
+        assertEquals("SELECT COUNT(*) INTO v_reccount FROM mycatalog.mytable WHERE pk_col1 = 'value1';",sqlLines[lineToCheck].trim());
         lineToCheck++;
         assertEquals("IF v_reccount = 0 THEN",sqlLines[lineToCheck].trim());
         lineToCheck++;
-        assertEquals("INSERT INTO myschema.mytable (col2, pk_col1) VALUES ('value2', 'value1');",sqlLines[lineToCheck]);
+        assertEquals("INSERT INTO mycatalog.mytable (col2, pk_col1) VALUES ('value2', 'value1');",sqlLines[lineToCheck]);
         lineToCheck++;
         assertEquals("ELSIF v_reccount = 1 THEN",sqlLines[lineToCheck].trim());
         lineToCheck++;
-        assertEquals("UPDATE myschema.mytable SET col2 = 'value2' WHERE pk_col1 = 'value1';",sqlLines[lineToCheck].trim());
+        assertEquals("UPDATE mycatalog.mytable SET col2 = 'value2' WHERE pk_col1 = 'value1';",sqlLines[lineToCheck].trim());
         lineToCheck++;
         assertEquals("END IF;",sqlLines[lineToCheck].trim());
         lineToCheck++;

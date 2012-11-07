@@ -2,6 +2,8 @@ package liquibase.database.core;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.structure.DatabaseObject;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 import liquibase.executor.Executor;
 import liquibase.executor.ExecutorService;
@@ -24,7 +26,7 @@ public class SybaseDatabase extends AbstractDatabase {
         return "Sybase SQL Server";
     }
 
-    public String getTypeName() {
+    public String getShortName() {
         return "sybase";
     }
 
@@ -61,7 +63,17 @@ public class SybaseDatabase extends AbstractDatabase {
     public int getPriority() {
         return PRIORITY_DEFAULT;
     }
-    
+
+
+    public Integer getDefaultPort() {
+        return 4100;
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "Sybase";
+    }
+
     /**
      * Sybase does not support DDL and meta data in transactions properly,
      * as such we turn off the commit and turn on auto commit.
@@ -72,7 +84,7 @@ public class SybaseDatabase extends AbstractDatabase {
     }
 
     @Override
-    public Set<String> getSystemTablesAndViews() {
+    public Set<String> getSystemViews() {
         return systemTablesAndViews;
     }
 
@@ -134,16 +146,6 @@ public class SybaseDatabase extends AbstractDatabase {
 	}    
     
     @Override
-    protected String getDefaultDatabaseSchemaName() throws DatabaseException {
-        return null;
-    }
-
-    @Override
-    public String getDefaultCatalogName() throws DatabaseException {
-        return getConnection().getCatalog();
-    }
-
-    @Override
     public String getConcatSql(String... values) {
         StringBuffer returnString = new StringBuffer();
         for (String value : values) {
@@ -200,35 +202,24 @@ public class SybaseDatabase extends AbstractDatabase {
 
 
     @Override
-    public boolean isSystemTable(String catalogName, String schemaName, String tableName) {
-        return super.isSystemTable(catalogName, schemaName, tableName) || schemaName.equals("sys") || tableName.toLowerCase().startsWith("sybfi");
+    public boolean isSystemTable(Schema schema, String tableName) {
+        schema = correctSchema(schema);
+        return super.isSystemTable(schema, tableName) || schema.getName().equals("sys") || tableName.toLowerCase().startsWith("sybfi");
     }
 
     @Override
-    public boolean isSystemView(String catalogName, String schemaName, String viewName) {
-        return super.isSystemView(catalogName, schemaName, viewName) || schemaName.equals("sys") || viewName.toLowerCase().equals("sybfi");
+    public boolean isSystemView(Schema schema, String viewName) {
+        schema = correctSchema(schema);
+        return super.isSystemView(schema, viewName) || schema.getName().equals("sys") || viewName.toLowerCase().equals("sybfi");
     }
 
     public String generateDefaultConstraintName(String tableName, String columnName) {
         return "DF_" + tableName + "_" + columnName;
     }
 
-
     @Override
-    public String convertRequestedSchemaToCatalog(String requestedSchema) throws DatabaseException {
-        return getDefaultCatalogName();
-    }
-
-    @Override
-    public String convertRequestedSchemaToSchema(String requestedSchema) throws DatabaseException {
-        if (requestedSchema == null) {
-            requestedSchema = getDefaultDatabaseSchemaName();
-        }
-
-        if (requestedSchema == null) {
-            return "dbo";
-        }
-        return requestedSchema;
+    public String getDefaultSchemaName() {
+        return "dbo";
     }
 
     @Override
@@ -237,13 +228,14 @@ public class SybaseDatabase extends AbstractDatabase {
     }
 
     @Override
-    public String escapeDatabaseObject(String objectName) {
+    public String escapeDatabaseObject(String objectName, Class<? extends DatabaseObject> objectType) {
         return "["+objectName+"]";
     }
 
 	@Override
-	public String getViewDefinition(String schemaName, String viewName) throws DatabaseException {
-        GetViewDefinitionStatement statement = new GetViewDefinitionStatement(convertRequestedSchemaToSchema(schemaName), viewName);
+	public String getViewDefinition(Schema schema, String viewName) throws DatabaseException {
+        schema = correctSchema(schema);
+        GetViewDefinitionStatement statement = new GetViewDefinitionStatement(schema.getCatalogName(), schema.getName(), viewName);
         Executor executor = ExecutorService.getInstance().getExecutor(this);
         @SuppressWarnings("unchecked")
         List<String> definitionRows = (List<String>) executor.queryForList(statement, String.class);
@@ -285,8 +277,8 @@ public class SybaseDatabase extends AbstractDatabase {
     }
 
     @Override
-    public String escapeIndexName(String schemaName, String indexName) {
-        return super.escapeIndexName(null, indexName);
+    public String escapeIndexName(String catalogName,String schemaName, String indexName) {
+        return super.escapeIndexName(null, null, indexName);
     }
 
 }

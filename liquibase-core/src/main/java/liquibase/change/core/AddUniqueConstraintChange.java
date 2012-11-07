@@ -1,16 +1,12 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.Change;
-import liquibase.change.ChangeMetaData;
-import liquibase.change.ColumnConfig;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.database.core.SQLiteDatabase;
 import liquibase.database.core.SQLiteDatabase.AlterTableVisitor;
 import liquibase.database.structure.Index;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.AddUniqueConstraintStatement;
-import liquibase.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +14,10 @@ import java.util.List;
 /**
  * Adds a unique constraint to an existing column.
  */
+@DatabaseChange(name="addUniqueConstraint", description = "Add Unique Constraint", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "column")
 public class AddUniqueConstraintChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private String columnNames;
@@ -30,18 +28,25 @@ public class AddUniqueConstraintChange extends AbstractChange {
     private Boolean initiallyDeferred;
     private Boolean disabled;
 
-    public AddUniqueConstraintChange() {
-        super("addUniqueConstraint", "Add Unique Constraint", ChangeMetaData.PRIORITY_DEFAULT);
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.catalog")
+    public String getCatalogName() {
+        return catalogName;
     }
 
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all",mustApplyTo = "column.relation")
     public String getTableName() {
         return tableName;
     }
@@ -50,6 +55,7 @@ public class AddUniqueConstraintChange extends AbstractChange {
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "column")
     public String getColumnNames() {
         return columnNames;
     }
@@ -58,6 +64,7 @@ public class AddUniqueConstraintChange extends AbstractChange {
         this.columnNames = columnNames;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getConstraintName() {
         return constraintName;
     }
@@ -120,7 +127,7 @@ public class AddUniqueConstraintChange extends AbstractChange {
             disabled = getDisabled();
         }
 
-    	AddUniqueConstraintStatement statement = new AddUniqueConstraintStatement(getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), getTableName(), getColumnNames(), getConstraintName());
+    	AddUniqueConstraintStatement statement = new AddUniqueConstraintStatement(getCatalogName(), getSchemaName(), getTableName(), getColumnNames(), getConstraintName());
         statement.setTablespace(getTablespace())
                         .setDeferrable(deferrable)
                         .setInitiallyDeferred(initiallyDeferred)
@@ -129,47 +136,47 @@ public class AddUniqueConstraintChange extends AbstractChange {
         return new SqlStatement[] { statement };
     }
 
-    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) {
-
-    	// SQLite does not support this ALTER TABLE operation until now.
-		// For more information see: http://www.sqlite.org/omitted.html.
-		// This is a small work around...
-
-    	List<SqlStatement> statements = new ArrayList<SqlStatement>();
-
-		// define alter table logic
-		AlterTableVisitor rename_alter_visitor = new AlterTableVisitor() {
-			public ColumnConfig[] getColumnsToAdd() {
-				return new ColumnConfig[0];
-			}
-			public boolean copyThisColumn(ColumnConfig column) {
-				return true;
-			}
-			public boolean createThisColumn(ColumnConfig column) {
-				String[] split_columns = getColumnNames().split("[ ]*,[ ]*");
-				for (String split_column:split_columns) {
-					if (column.getName().equals(split_column)) {
-    					column.getConstraints().setUnique(true);
-    				}
-				}
-				return true;
-			}
-			public boolean createThisIndex(Index index) {
-				return true;
-			}
-		};
-
-    	try {
-    		// alter table
-			statements.addAll(SQLiteDatabase.getAlterTableStatements(
-					rename_alter_visitor,
-					database,getSchemaName(),getTableName()));
-    	} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-    	return statements.toArray(new SqlStatement[statements.size()]);
-    }
+//    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) {
+//
+//    	// SQLite does not support this ALTER TABLE operation until now.
+//		// For more information see: http://www.sqlite.org/omitted.html.
+//		// This is a small work around...
+//
+//    	List<SqlStatement> statements = new ArrayList<SqlStatement>();
+//
+//		// define alter table logic
+//		AlterTableVisitor rename_alter_visitor = new AlterTableVisitor() {
+//			public ColumnConfig[] getColumnsToAdd() {
+//				return new ColumnConfig[0];
+//			}
+//			public boolean copyThisColumn(ColumnConfig column) {
+//				return true;
+//			}
+//			public boolean createThisColumn(ColumnConfig column) {
+//				String[] split_columns = getColumnNames().split("[ ]*,[ ]*");
+//				for (String split_column:split_columns) {
+//					if (column.getName().equals(split_column)) {
+//    					column.getConstraints().setUnique(true);
+//    				}
+//				}
+//				return true;
+//			}
+//			public boolean createThisIndex(Index index) {
+//				return true;
+//			}
+//		};
+//
+//    	try {
+//    		// alter table
+//			statements.addAll(SQLiteDatabase.getAlterTableStatements(
+//					rename_alter_visitor,
+//					database,getCatalogName(), getSchemaName(),getTableName()));
+//    	} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//
+//    	return statements.toArray(new SqlStatement[statements.size()]);
+//    }
 
     public String getConfirmationMessage() {
         return "Unique constraint added to "+getTableName()+"("+getColumnNames()+")";

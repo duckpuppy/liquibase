@@ -1,9 +1,13 @@
 package liquibase.database.core;
 
 import java.math.BigInteger;
+import java.sql.SQLException;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.structure.DatabaseObject;
+import liquibase.database.structure.Index;
+import liquibase.database.structure.PrimaryKey;
 import liquibase.exception.DatabaseException;
 import liquibase.executor.ExecutorService;
 import liquibase.statement.core.RawSqlStatement;
@@ -14,7 +18,7 @@ import liquibase.statement.core.RawSqlStatement;
 public class MySQLDatabase extends AbstractDatabase {
     public static final String PRODUCT_NAME = "MySQL";
 
-    public String getTypeName() {
+    public String getShortName() {
         return "mysql";
     }
 
@@ -24,6 +28,23 @@ public class MySQLDatabase extends AbstractDatabase {
 //        return super.getConnection().getConnectionUserName().replaceAll("\\@.*", "");
 //    }
 
+    @Override
+    public String correctObjectName(String name, Class<? extends DatabaseObject> objectType) {
+        if (objectType.equals(PrimaryKey.class) && name.equals("PRIMARY")) {
+            return null;
+        } else {
+            return name;
+        }
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "MySQL";
+    }
+
+    public Integer getDefaultPort() {
+        return 3306;
+    }
 
     public int getPriority() {
         return PRIORITY_DEFAULT;
@@ -54,43 +75,43 @@ public class MySQLDatabase extends AbstractDatabase {
         if (currentDateTimeFunction != null) {
             return currentDateTimeFunction;
         }
-        
+
         return "NOW()";
     }
 
     @Override
     public String getLineComment() {
-        return "--";
+        return "-- ";
     }
 
     @Override
     protected String getAutoIncrementClause() {
-    	return "AUTO_INCREMENT";
-    }    
+        return "AUTO_INCREMENT";
+    }
 
     @Override
     protected boolean generateAutoIncrementBy(BigInteger incrementBy) {
-    	// incrementBy not supported
-    	return false;
+        // incrementBy not supported
+        return false;
     }
-   
+
     @Override
     protected String getAutoIncrementOpening() {
-    	return "";
+        return "";
     }
-    
+
     @Override
     protected String getAutoIncrementClosing() {
-    	return "";
+        return "";
     }
-    
+
     @Override
     protected String getAutoIncrementStartWithClause() {
-    	return "=%d";
+        return "=%d";
     }
-    
+
     @Override
-    public String getConcatSql(String ... values) {
+    public String getConcatSql(String... values) {
         StringBuffer returnString = new StringBuffer();
         returnString.append("CONCAT_WS(");
         for (String value : values) {
@@ -104,37 +125,31 @@ public class MySQLDatabase extends AbstractDatabase {
         return false;
     }
 
-
     @Override
-    protected String getDefaultDatabaseSchemaName() throws DatabaseException {
-//        return super.getDefaultDatabaseSchemaName().replaceFirst("\\@.*","");
-            return getConnection().getCatalog();
+    public String getDefaultSchemaName() {
+        return null;
     }
 
     @Override
-    public String convertRequestedSchemaToSchema(String requestedSchema) throws DatabaseException {
-        if (requestedSchema == null) {
-            return getDefaultDatabaseSchemaName();
-        }
-        return requestedSchema;
+    public String escapeDatabaseObject(String objectName, Class<? extends DatabaseObject> objectType) {
+        return "`" + objectName + "`";
     }
 
     @Override
-    public String convertRequestedSchemaToCatalog(String requestedSchema) throws DatabaseException {
-        return requestedSchema;
+    public boolean supportsSchemas() {
+        return false;
     }
 
     @Override
-    public String escapeDatabaseObject(String objectName) {
-        return "`"+objectName+"`";
+    public boolean supportsCatalogs() {
+        return true;
     }
 
     @Override
-    public String escapeIndexName(String schemaName, String indexName) {
-        return escapeDatabaseObject(indexName);
+    public String escapeIndexName(String catalogName, String schemaName, String indexName) {
+        return escapeDatabaseObject(indexName, Index.class);
     }
 
-    
     @Override
     public boolean supportsForeignKeyDisable() {
         return true;

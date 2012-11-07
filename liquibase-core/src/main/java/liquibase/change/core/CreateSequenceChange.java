@@ -1,20 +1,19 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.Change;
-import liquibase.change.ChangeMetaData;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.CreateSequenceStatement;
-import liquibase.util.StringUtils;
 
 import java.math.BigInteger;
 
 /**
  * Creates a new sequence.
  */
+@DatabaseChange(name="createSequence", description = "Create Sequence", priority = ChangeMetaData.PRIORITY_DEFAULT)
 public class CreateSequenceChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String sequenceName;
     private BigInteger startValue;
@@ -24,8 +23,12 @@ public class CreateSequenceChange extends AbstractChange {
     private Boolean ordered;
     private Boolean cycle;
 
-    public CreateSequenceChange() {
-        super("createSequence", "Create Sequence", ChangeMetaData.PRIORITY_DEFAULT);
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
     public String getSchemaName() {
@@ -33,9 +36,10 @@ public class CreateSequenceChange extends AbstractChange {
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getSequenceName() {
         return sequenceName;
     }
@@ -94,7 +98,7 @@ public class CreateSequenceChange extends AbstractChange {
 
     public SqlStatement[] generateStatements(Database database) {
         return new SqlStatement[] {
-                new CreateSequenceStatement(getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), getSequenceName())
+                new CreateSequenceStatement(getCatalogName(), getSchemaName(), getSequenceName())
                 .setIncrementBy(getIncrementBy())
                 .setMaxValue(getMaxValue())
                 .setMinValue(getMinValue())

@@ -22,15 +22,7 @@ public class UnsupportedDatabase extends AbstractDatabase {
      * Always returns null or DATABASECHANGELOG table may not be found.
      */
     @Override
-    public String getDefaultCatalogName() throws DatabaseException {
-        return null;
-    }
-
-    /**
-     * Always returns null or DATABASECHANGELOG table may not be found.
-     */
-    @Override
-    protected String getDefaultDatabaseSchemaName() throws DatabaseException {
+    public String getDefaultCatalogName() {
         return null;
     }
 
@@ -42,8 +34,17 @@ public class UnsupportedDatabase extends AbstractDatabase {
         return null;
     }    
 
-    public String getTypeName() {
+    public String getShortName() {
         return "unsupported";
+    }
+
+    public Integer getDefaultPort() {
+        return null;
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "Unsupported";
     }
 
     public boolean supportsInitiallyDeferrableColumns() {

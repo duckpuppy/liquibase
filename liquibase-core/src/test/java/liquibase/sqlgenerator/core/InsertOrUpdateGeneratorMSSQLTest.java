@@ -20,20 +20,19 @@ public class InsertOrUpdateGeneratorMSSQLTest {
         InsertOrUpdateGeneratorMSSQL generator = new InsertOrUpdateGeneratorMSSQL();
         MSSQLDatabase database = new MSSQLDatabase();
 
-        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("myschema","mytable","pk_col1");
+        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("mycatalog", "myschema","mytable","pk_col1");
         statement.addColumnValue("pk_col1","value1");
         statement.addColumnValue("col2","value2");
 
         String where = "1 = 1";
 
-        Class c = InsertOrUpdateGenerator.class.getClass();
         String recordCheck = (String)invokePrivateMethod(generator,"getRecordCheck", new Object[] {statement,database,where});
 
         Integer lineNumber = 0;
         String[] lines = recordCheck.split("\n");
         assertEquals("DECLARE @reccount integer", lines[lineNumber]);
         lineNumber++;
-        assertEquals("SELECT @reccount = count(*) FROM [myschema].[mytable] WHERE " + where, lines[lineNumber]);
+        assertEquals("SELECT @reccount = count(*) FROM [mycatalog].[myschema].[mytable] WHERE " + where, lines[lineNumber]);
         lineNumber++;
         assertEquals("IF @reccount = 0", lines[lineNumber]);
 
@@ -44,7 +43,7 @@ public class InsertOrUpdateGeneratorMSSQLTest {
         InsertOrUpdateGeneratorMSSQL generator = new InsertOrUpdateGeneratorMSSQL();
         MSSQLDatabase database = new MSSQLDatabase();
 
-        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("myschema","mytable","pk_col1");
+        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("mycatalog", "myschema","mytable","pk_col1");
         statement.addColumnValue("pk_col1","value1");
         statement.addColumnValue("col2","value2");
 
@@ -68,7 +67,7 @@ public class InsertOrUpdateGeneratorMSSQLTest {
         InsertOrUpdateGeneratorMSSQL generator = new InsertOrUpdateGeneratorMSSQL();
         MSSQLDatabase database = new MSSQLDatabase();
 
-        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("myschema","mytable","pk_col1");
+        InsertOrUpdateStatement statement = new InsertOrUpdateStatement("mycatalog", "myschema","mytable","pk_col1");
         statement.addColumnValue("pk_col1","value1");
         statement.addColumnValue("col2","value2");
 
@@ -88,7 +87,7 @@ public class InsertOrUpdateGeneratorMSSQLTest {
          InsertOrUpdateGeneratorMSSQL generator = new InsertOrUpdateGeneratorMSSQL();
          MSSQLDatabase database = new MSSQLDatabase();
 
-         InsertOrUpdateStatement statement = new InsertOrUpdateStatement("myschema","mytable","pk_col1");
+         InsertOrUpdateStatement statement = new InsertOrUpdateStatement("mycatalog", "myschema","mytable","pk_col1");
          statement.addColumnValue("col2","value2");
 
          String where = "1 = 1";

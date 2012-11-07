@@ -1,20 +1,17 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.ChangeMetaData;
-import liquibase.change.ChangeWithColumns;
-import liquibase.change.ColumnConfig;
-import liquibase.change.TextNode;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.UpdateStatement;
-import liquibase.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@DatabaseChange(name = "update", description = "Update Data", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "table")
 public class UpdateDataChange extends AbstractChange implements ChangeWithColumns<ColumnConfig> {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private List<ColumnConfig> columns;
@@ -23,18 +20,28 @@ public class UpdateDataChange extends AbstractChange implements ChangeWithColumn
     private String whereClause;
 
     public UpdateDataChange() {
-        super("update", "Update Data", ChangeMetaData.PRIORITY_DEFAULT);
         columns = new ArrayList<ColumnConfig>();
     }
 
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.catalog")
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="column.relation.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "table")
     public String getTableName() {
         return tableName;
     }
@@ -43,6 +50,7 @@ public class UpdateDataChange extends AbstractChange implements ChangeWithColumn
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public List<ColumnConfig> getColumns() {
         return columns;
     }
@@ -69,7 +77,7 @@ public class UpdateDataChange extends AbstractChange implements ChangeWithColumn
 
     public SqlStatement[] generateStatements(Database database) {
 
-        UpdateStatement statement = new UpdateStatement(getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), getTableName());
+        UpdateStatement statement = new UpdateStatement(getCatalogName(), getSchemaName(), getTableName());
 
         for (ColumnConfig column : columns) {
             statement.addNewColumnValue(column.getName(), column.getValueObject());

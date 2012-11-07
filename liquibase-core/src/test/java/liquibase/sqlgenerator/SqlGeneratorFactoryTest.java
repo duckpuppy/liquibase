@@ -119,7 +119,7 @@ public class SqlGeneratorFactoryTest {
 
     @Test
     public void getGenerators() {
-        SortedSet<SqlGenerator> allGenerators = SqlGeneratorFactory.getInstance().getGenerators(new AddAutoIncrementStatement(null, "person", "name", "varchar(255)", null, null), new H2Database());
+        SortedSet<SqlGenerator> allGenerators = SqlGeneratorFactory.getInstance().getGenerators(new AddAutoIncrementStatement(null, null, "person", "name", "varchar(255)", null, null), new H2Database());
 
         assertNotNull(allGenerators);
         assertEquals(1, allGenerators.size());        
@@ -132,7 +132,7 @@ public class SqlGeneratorFactoryTest {
                 return level;
             }
 
-            public boolean requiresUpdatedDatabaseMetadata(Database database) {
+            public boolean queriesDatabase(Database database) {
                 return false;
             }
 

@@ -22,6 +22,8 @@ public class ColumnConfig {
     private Number valueNumeric;
     private Date valueDate;
     private Boolean valueBoolean;
+    private String valueBlob;
+    private String valueClob;
     private DatabaseFunction valueComputed;
 
     private String defaultValue;
@@ -39,14 +41,16 @@ public class ColumnConfig {
     
     public ColumnConfig(Column columnStructure) {
     	setName(columnStructure.getName());
-		setType(columnStructure.getTypeName());
+		setType(columnStructure.getType().toString());
 		if (columnStructure.getDefaultValue()!=null) {
 			setDefaultValue(columnStructure.getDefaultValue().toString());
 		}
-		setAutoIncrement(columnStructure.isAutoIncrement());
-		setStartWith(columnStructure.getStartWith());
-		setIncrementBy(columnStructure.getIncrementBy());
-		ConstraintsConfig constraints = new ConstraintsConfig(); 
+        if (columnStructure.getType().isAutoIncrement()) {
+		    setAutoIncrement(true);
+            setStartWith(columnStructure.getType().getAutoIncrementInformation().getStartWith());
+            setIncrementBy(columnStructure.getType().getAutoIncrementInformation().getIncrementBy());
+        }
+        ConstraintsConfig constraints = new ConstraintsConfig();
 		constraints.setNullable(columnStructure.isNullable());
 		constraints.setPrimaryKey(columnStructure.isPrimaryKey());
 		constraints.setUnique(columnStructure.isUnique());
@@ -369,5 +373,21 @@ public class ColumnConfig {
     public ColumnConfig setRemarks(String remarks) {
         this.remarks = remarks;
         return this;
+    }
+
+    public String getValueBlob() {
+        return valueBlob;
+    }
+
+    public void setValueBlob(String valueBlob) {
+        this.valueBlob = valueBlob;
+    }
+
+    public String getValueClob() {
+        return valueClob;
+    }
+
+    public void setValueClob(String valueClob) {
+        this.valueClob = valueClob;
     }
 }

@@ -1,6 +1,7 @@
 package liquibase.change.core;
 
 import liquibase.change.AbstractChangeTest;
+import liquibase.change.ChangeMetaData;
 import liquibase.database.Database;
 import liquibase.database.core.*;
 import liquibase.statement.SqlStatement;
@@ -18,6 +19,7 @@ public class AddAutoIncrementChangeTest extends AbstractChangeTest {
         AddAutoIncrementChange change = new AddAutoIncrementChange();
         assertEquals("addAutoIncrement", change.getChangeMetaData().getName());
         assertEquals("Set Column as Auto-Increment", change.getChangeMetaData().getDescription());
+        assertArrayEquals(new String[] {"column"}, change.getChangeMetaData().getAppliesTo());
     }
 
     @Override
@@ -75,6 +77,14 @@ public class AddAutoIncrementChangeTest extends AbstractChangeTest {
                 || database instanceof MSSQLDatabase
                 || database instanceof DerbyDatabase
                 ;//|| (database instanceof HsqlDatabase);
+    }
+
+    @Test
+    public void changeMetaDataCreatedCorrectly() {
+        AddAutoIncrementChange change = new AddAutoIncrementChange();
+        ChangeMetaData metaData = change.getChangeMetaData();
+        assertEquals("addAutoIncrement", metaData.getName());
+
     }
 
 }

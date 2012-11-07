@@ -1,37 +1,37 @@
 package liquibase.change.core;
 
 import liquibase.change.AbstractChange;
+import liquibase.change.DatabaseChange;
 import liquibase.change.ChangeMetaData;
-import liquibase.change.ChangeProperty;
+import liquibase.change.DatabaseChangeProperty;
 import liquibase.database.Database;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.DropIndexStatement;
-import liquibase.util.StringUtils;
 
 /**
  * Drops an existing index.
  */
+@DatabaseChange(name="dropIndex", description = "Drop Index", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "index")
 public class DropIndexChange extends AbstractChange {
 
     private String schemaName;
     private String indexName;
     private String tableName;
 
-    @ChangeProperty(includeInSerialization = false)
+    @DatabaseChangeProperty(includeInSerialization = false)
     private String associatedWith;
+    private String catalogName;
 
-    public DropIndexChange() {
-        super("dropIndex", "Drop Index", ChangeMetaData.PRIORITY_DEFAULT);
-    }
-
+    @DatabaseChangeProperty(mustApplyTo ="index.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "index")
     public String getIndexName() {
         return indexName;
     }
@@ -40,6 +40,7 @@ public class DropIndexChange extends AbstractChange {
         this.indexName = indexName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "index.table")
     public String getTableName() {
         return tableName;
     }
@@ -50,7 +51,7 @@ public class DropIndexChange extends AbstractChange {
 
     public SqlStatement[] generateStatements(Database database) {
         return new SqlStatement[] {
-            new DropIndexStatement(getIndexName(), getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), getTableName(), getAssociatedWith())
+            new DropIndexStatement(getIndexName(), getCatalogName(), getSchemaName(), getTableName(), getAssociatedWith())
         };
     }
 
@@ -64,5 +65,13 @@ public class DropIndexChange extends AbstractChange {
 
     public void setAssociatedWith(String associatedWith) {
         this.associatedWith = associatedWith;
+    }
+
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 }

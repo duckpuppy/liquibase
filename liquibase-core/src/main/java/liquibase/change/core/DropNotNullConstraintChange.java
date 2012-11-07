@@ -1,16 +1,12 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.Change;
-import liquibase.change.ChangeMetaData;
-import liquibase.change.ColumnConfig;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.database.core.SQLiteDatabase;
 import liquibase.database.core.SQLiteDatabase.AlterTableVisitor;
 import liquibase.database.structure.Index;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.SetNullableStatement;
-import liquibase.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,26 +14,34 @@ import java.util.List;
 /**
  * Drops a not-null constraint from an existing column.
  */
+@DatabaseChange(name="dropNotNullConstraint", description = "Drop Not-Null Constraint", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "notNullConstraint")
 public class DropNotNullConstraintChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private String columnName;
     private String columnDataType;
 
-
-    public DropNotNullConstraintChange() {
-        super("dropNotNullConstraint", "Drop Not-Null Constraint", ChangeMetaData.PRIORITY_DEFAULT);
+    @DatabaseChangeProperty(mustApplyTo ="notNullConstraint.table.catalog")
+    public String getCatalogName() {
+        return catalogName;
     }
 
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="notNullConstraint.table.schema")
     public String getSchemaName() {
         return schemaName;
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "notNullConstraint.table")
     public String getTableName() {
         return tableName;
     }
@@ -46,6 +50,7 @@ public class DropNotNullConstraintChange extends AbstractChange {
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "notNullConstraint.column")
     public String getColumnName() {
         return columnName;
     }
@@ -70,47 +75,48 @@ public class DropNotNullConstraintChange extends AbstractChange {
 //    	}
 
     	return new SqlStatement[] { new SetNullableStatement(
-    			getSchemaName() == null?database.getDefaultSchemaName():getSchemaName(), 
+                getCatalogName(),
+    			getSchemaName(),
     			getTableName(), getColumnName(), getColumnDataType(), true) 
     	};
     }
     
-    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) {
-    	// SQLite does not support this ALTER TABLE operation until now.
-		// For more information see: http://www.sqlite.org/omitted.html.
-		// This is a small work around...
-		
-    	List<SqlStatement> statements = new ArrayList<SqlStatement>();
-    	
-		// define alter table logic
-		AlterTableVisitor rename_alter_visitor = new AlterTableVisitor() {
-			public ColumnConfig[] getColumnsToAdd() {
-				return new ColumnConfig[0];
-			}
-			public boolean copyThisColumn(ColumnConfig column) {
-				return true;
-			}
-			public boolean createThisColumn(ColumnConfig column) {
-				if (column.getName().equals(getColumnName())) {
-					column.getConstraints().setNullable(true);
-				}
-				return true;
-			}
-			public boolean createThisIndex(Index index) {
-				return true;
-			}
-		};
-    		
-    	try {
-    		// alter table
-			statements.addAll(SQLiteDatabase.getAlterTableStatements(
-					rename_alter_visitor,
-					database,getSchemaName(),getTableName()));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return statements.toArray(new SqlStatement[statements.size()]);		
-    }
+//    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) {
+//    	// SQLite does not support this ALTER TABLE operation until now.
+//		// For more information see: http://www.sqlite.org/omitted.html.
+//		// This is a small work around...
+//
+//    	List<SqlStatement> statements = new ArrayList<SqlStatement>();
+//
+//		// define alter table logic
+//		AlterTableVisitor rename_alter_visitor = new AlterTableVisitor() {
+//			public ColumnConfig[] getColumnsToAdd() {
+//				return new ColumnConfig[0];
+//			}
+//			public boolean copyThisColumn(ColumnConfig column) {
+//				return true;
+//			}
+//			public boolean createThisColumn(ColumnConfig column) {
+//				if (column.getName().equals(getColumnName())) {
+//					column.getConstraints().setNullable(true);
+//				}
+//				return true;
+//			}
+//			public boolean createThisIndex(Index index) {
+//				return true;
+//			}
+//		};
+//
+//    	try {
+//    		// alter table
+//			statements.addAll(SQLiteDatabase.getAlterTableStatements(
+//					rename_alter_visitor,
+//					database,getCatalogName(), getSchemaName(),getTableName()));
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		return statements.toArray(new SqlStatement[statements.size()]);
+//    }
 
     @Override
     protected Change[] createInverses() {

@@ -1,7 +1,9 @@
 package liquibase.change.core;
 
 import liquibase.change.AbstractChange;
+import liquibase.change.DatabaseChange;
 import liquibase.change.ChangeMetaData;
+import liquibase.change.DatabaseChangeProperty;
 import liquibase.database.Database;
 import liquibase.database.core.SQLiteDatabase;
 import liquibase.statement.SqlStatement;
@@ -10,15 +12,23 @@ import liquibase.statement.core.DropForeignKeyConstraintStatement;
 /**
  * Drops an existing foreign key constraint.
  */
+@DatabaseChange(name="dropForeignKeyConstraint", description = "Drop Foreign Key Constraint", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "foreignKey")
 public class DropForeignKeyConstraintChange extends AbstractChange {
+    private String baseTableCatalogName;
     private String baseTableSchemaName;
     private String baseTableName;
     private String constraintName;
 
-    public DropForeignKeyConstraintChange() {
-        super("dropForeignKeyConstraint", "Drop Foreign Key Constraint", ChangeMetaData.PRIORITY_DEFAULT);
+    @DatabaseChangeProperty(mustApplyTo ="foreignKey.table.catalog")
+    public String getBaseTableCatalogName() {
+        return baseTableCatalogName;
     }
 
+    public void setBaseTableCatalogName(String baseTableCatalogName) {
+        this.baseTableCatalogName = baseTableCatalogName;
+    }
+
+    @DatabaseChangeProperty(mustApplyTo ="foreignKey.table.schema")
     public String getBaseTableSchemaName() {
         return baseTableSchemaName;
     }
@@ -27,6 +37,7 @@ public class DropForeignKeyConstraintChange extends AbstractChange {
         this.baseTableSchemaName = baseTableSchemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "foreignKey.table")
     public String getBaseTableName() {
         return baseTableName;
     }
@@ -35,6 +46,7 @@ public class DropForeignKeyConstraintChange extends AbstractChange {
         this.baseTableName = baseTableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all", mustApplyTo = "foreignKey")
     public String getConstraintName() {
         return constraintName;
     }
@@ -47,18 +59,19 @@ public class DropForeignKeyConstraintChange extends AbstractChange {
     	
     	if (database instanceof SQLiteDatabase) {
     		// return special statements for SQLite databases
-    		return generateStatementsForSQLiteDatabase(database);
+    		return generateStatementsForSQLiteDatabase();
     	} 
     	
         return new SqlStatement[]{
                 new DropForeignKeyConstraintStatement(
-                        getBaseTableSchemaName() == null?database.getDefaultSchemaName():getBaseTableSchemaName(),
+                        getBaseTableCatalogName(),
+                        getBaseTableSchemaName(),
                         getBaseTableName(),
                         getConstraintName()),
         };    	
     }
     
-    private SqlStatement[] generateStatementsForSQLiteDatabase(Database database) {
+    private SqlStatement[] generateStatementsForSQLiteDatabase() {
     	// SQLite does not support foreign keys until now.
 		// See for more information: http://www.sqlite.org/omitted.html
 		// Therefore this is an empty operation...

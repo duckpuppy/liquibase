@@ -1,22 +1,41 @@
 package liquibase.serializer.core.string;
 
-import liquibase.change.*;
-import liquibase.change.core.*;
-import liquibase.change.custom.CustomChangeWrapper;
-import liquibase.change.custom.CustomSqlChange;
-import liquibase.change.custom.ExampleCustomSqlChange;
-import liquibase.logging.Logger;
-import liquibase.resource.ClassLoaderResourceAccessor;
-import liquibase.resource.ResourceAccessor;
-import liquibase.statement.DatabaseFunction;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
+import liquibase.change.*;
+import liquibase.change.DatabaseChangeProperty;
+import liquibase.change.core.AddColumnChange;
+import liquibase.change.core.AddForeignKeyConstraintChange;
+import liquibase.change.core.AddUniqueConstraintChange;
+import liquibase.change.core.LoadDataColumnConfig;
+import liquibase.change.core.RawSQLChange;
+import liquibase.change.core.SQLFileChange;
+import liquibase.change.custom.CustomChangeWrapper;
+import liquibase.change.custom.CustomSqlChange;
+import liquibase.change.custom.ExampleCustomSqlChange;
+import liquibase.changelog.ChangeLogParameters;
+import liquibase.logging.Logger;
+import liquibase.resource.ClassLoaderResourceAccessor;
+import liquibase.resource.ResourceAccessor;
+import liquibase.statement.DatabaseFunction;
+
+import org.junit.Test;
 
 public class StringChangeLogSerializerTest {
 
@@ -244,7 +263,7 @@ public class StringChangeLogSerializerTest {
         }
         
         for (Field field : clazz.getDeclaredFields()) {
-            if (field.getAnnotation(ChangeProperty.class) != null && !field.getAnnotation(ChangeProperty.class).includeInSerialization()) {
+            if (field.getAnnotation(DatabaseChangeProperty.class) != null && !field.getAnnotation(DatabaseChangeProperty.class).includeInSerialization()) {
                 continue;
             }
             field.setAccessible(true);
@@ -282,6 +301,8 @@ public class StringChangeLogSerializerTest {
                 field.set(object, createCustomChange());
             } else if (field.getType().equals(Map.class)) {
                 field.set(object, createMap());
+            } else if (field.getType().equals(ChangeLogParameters.class)){
+                 // TODO: unclear what to do here ...               
             } else if (Collection.class.isAssignableFrom(field.getType())) {
                 Type genericType = field.getGenericType();
                 if (genericType instanceof ParameterizedType) {
@@ -384,4 +405,5 @@ public class StringChangeLogSerializerTest {
         setFields(config);
         return config;
     }
+  
 }

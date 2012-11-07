@@ -1,18 +1,27 @@
 package liquibase.change;
 
-import liquibase.database.Database;
-import liquibase.exception.ValidationErrors;
-import liquibase.serializer.core.string.StringChangeLogSerializer;
-import liquibase.statement.SqlStatement;
-import liquibase.statement.DatabaseFunction;
-import liquibase.test.TestContext;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import liquibase.database.Database;
+import liquibase.exception.ValidationErrors;
+import liquibase.serializer.core.string.StringChangeLogSerializer;
+import liquibase.statement.DatabaseFunction;
+import liquibase.statement.SqlStatement;
+import liquibase.test.TestContext;
+
+import org.junit.Test;
 
 /**
  * Base test class for changes
@@ -87,6 +96,9 @@ public abstract class AbstractChangeTest {
 
                 column2.setName("87682346asgasdg");
                 checkThatChecksumIsNew(change, seenCheckSums, field);
+            } else if (field.getName().equalsIgnoreCase("changeLogParameters"))
+            {
+               // ignore, doesn't have something to do with generateCheckSum
 
             } else {
                 throw new RuntimeException("Unknown field type: "+field.getType()+" for "+field.getName());
@@ -183,7 +195,7 @@ public abstract class AbstractChangeTest {
             try {
                 validator.validate(sqlStatements, database);
             } catch (AssertionError e) {
-                AssertionError error = new AssertionError("GenerateAllValidator failed for " + database.getTypeName() + ": " + e.getMessage());
+                AssertionError error = new AssertionError("GenerateAllValidator failed for " + database.getShortName() + ": " + e.getMessage());
                 error.setStackTrace(e.getStackTrace());
 
                 throw error;
@@ -202,7 +214,7 @@ public abstract class AbstractChangeTest {
             try {
                 validator.validate(sqlStatements, database);
             } catch (AssertionError e) {
-                AssertionError error = new AssertionError("GenerateAllValidator failed for " + database.getTypeName() + ": " + e.getMessage());
+                AssertionError error = new AssertionError("GenerateAllValidator failed for " + database.getShortName() + ": " + e.getMessage());
                 error.setStackTrace(e.getStackTrace());
 
                 throw error;
@@ -228,7 +240,7 @@ public abstract class AbstractChangeTest {
             try {
                 validator.validate(inverses);
             } catch (AssertionError e) {
-                AssertionError error = new AssertionError("InverseValidator failed for " + database.getTypeName() + ": " + e.getMessage());
+                AssertionError error = new AssertionError("InverseValidator failed for " + database.getShortName() + ": " + e.getMessage());
                 error.setStackTrace(e.getStackTrace());
 
                 throw error;
@@ -247,7 +259,7 @@ public abstract class AbstractChangeTest {
             try {
                 validator.validate(inverses);
             } catch (AssertionError e) {
-                AssertionError error = new AssertionError("InverseValidator failed for " + database.getTypeName() + ": " + e.getMessage());
+                AssertionError error = new AssertionError("InverseValidator failed for " + database.getShortName() + ": " + e.getMessage());
                 error.setStackTrace(e.getStackTrace());
 
                 throw error;
@@ -262,7 +274,7 @@ public abstract class AbstractChangeTest {
             return;
         }
         for (Database database : TestContext.getInstance().getAllDatabases()) {
-            assertEquals("Unexpected availablity on "+database.getTypeName(), !changeIsUnsupported(database), change.supports(database));
+            assertEquals("Unexpected availablity on "+database.getShortName(), !changeIsUnsupported(database), change.supports(database));
         }
     }
 

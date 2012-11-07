@@ -3,6 +3,7 @@ package liquibase.database.core;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 
 import java.util.HashSet;
@@ -86,12 +87,21 @@ public class MaxDBDatabase extends AbstractDatabase {
     }
 
     @Override
-    public Set<String> getSystemTablesAndViews() {
+    public Set<String> getSystemViews() {
         return systemTablesAndViews;
     }
 
-    public String getTypeName() {
+    public String getShortName() {
         return "maxdb";
+    }
+
+    public Integer getDefaultPort() {
+        return 7210;
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return PRODUCT_NAME;
     }
 
     public boolean supportsInitiallyDeferrableColumns() {
@@ -123,37 +133,34 @@ public class MaxDBDatabase extends AbstractDatabase {
     }
 
     @Override
-    protected String getDefaultDatabaseSchemaName() throws DatabaseException {//NOPMD
-        return super.getDefaultDatabaseSchemaName().toUpperCase();
-    }
-
-    @Override
-    public boolean isSystemTable(String catalogName, String schemaName, String tableName) {
-        if (super.isSystemTable(catalogName, schemaName, tableName)) {
+    public boolean isSystemTable(Schema schema, String tableName) {
+        schema = correctSchema(schema);
+        if (super.isSystemTable(schema, tableName)) {
             return true;
-        } else if ("DOMAIN".equalsIgnoreCase(schemaName)) {
+        } else if ("DOMAIN".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSINFO".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSINFO".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSLOADER".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSLOADER".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSDBA".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSDBA".equalsIgnoreCase(schema.getName())) {
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean isSystemView(String catalogName, String schemaName, String tableName) {
-        if (super.isSystemView(catalogName, schemaName, tableName)) {
+    public boolean isSystemView(Schema schema, String tableName) {
+        schema = correctSchema(schema);
+        if (super.isSystemView(schema, tableName)) {
             return true;
-        } else if ("DOMAIN".equalsIgnoreCase(schemaName)) {
+        } else if ("DOMAIN".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSINFO".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSINFO".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSLOADER".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSLOADER".equalsIgnoreCase(schema.getName())) {
             return true;
-        } else if ("SYSDBA".equalsIgnoreCase(schemaName)) {
+        } else if ("SYSDBA".equalsIgnoreCase(schema.getName())) {
             return true;
         }
         return false;

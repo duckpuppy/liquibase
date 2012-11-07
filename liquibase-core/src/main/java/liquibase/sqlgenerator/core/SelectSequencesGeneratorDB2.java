@@ -2,6 +2,7 @@ package liquibase.sqlgenerator.core;
 
 import liquibase.database.Database;
 import liquibase.database.core.DB2Database;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.exception.ValidationErrors;
@@ -27,12 +28,10 @@ public class SelectSequencesGeneratorDB2 extends AbstractSqlGenerator<SelectSequ
     }
 
     public Sql[] generateSql(SelectSequencesStatement statement, Database database, SqlGeneratorChain sqlGeneratorChain) {
-        try {
-            return new Sql[] {
-                    new UnparsedSql("SELECT SEQNAME AS SEQUENCE_NAME FROM SYSCAT.SEQUENCES WHERE SEQTYPE='S' AND SEQSCHEMA = '" + database.convertRequestedSchemaToSchema(statement.getSchemaName()) + "'")
-            };
-        } catch (DatabaseException e) {
-            throw new UnexpectedLiquibaseException(e);
-        }
+        Schema schema = database.correctSchema(new Schema(statement.getCatalogName(), statement.getSchemaName()));
+
+        return new Sql[] {
+                new UnparsedSql("SELECT SEQNAME AS SEQUENCE_NAME FROM SYSCAT.SEQUENCES WHERE SEQTYPE='S' AND SEQSCHEMA = '" + schema.getCatalogName() + "'")
+        };
     }
 }

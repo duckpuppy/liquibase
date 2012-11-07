@@ -2,6 +2,8 @@ package liquibase.database.core;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.jvm.JdbcConnection;
+import liquibase.database.structure.DatabaseObject;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.DateParseException;
 import liquibase.util.ISODateFormat;
@@ -36,12 +38,26 @@ public class HsqlDatabase extends AbstractDatabase {
     }
 
 
+    public Integer getDefaultPort() {
+        return 9001;
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "HyperSQL";
+    }
+
     public int getPriority() {
         return PRIORITY_DEFAULT;
     }
 
-    public String getTypeName() {
+    public String getShortName() {
         return "hsqldb";
+    }
+
+    @Override
+    public String correctObjectName(String objectName, Class<? extends DatabaseObject> objectType) {
+        return objectName.toUpperCase();
     }
 
     @Override
@@ -54,7 +70,12 @@ public class HsqlDatabase extends AbstractDatabase {
     }
 
     @Override
-    protected String getDefaultDatabaseSchemaName() throws DatabaseException {
+    protected String doGetDefaultCatalogName() throws DatabaseException {
+        return "PUBLIC";
+    }
+
+    @Override
+    protected String doGetDefaultSchemaName() {
         return "PUBLIC";
     }
 
@@ -126,12 +147,12 @@ public class HsqlDatabase extends AbstractDatabase {
     }
 
     @Override
-    public String convertRequestedSchemaToSchema(String requestedSchema) throws DatabaseException {
-        return super.convertRequestedSchemaToSchema(requestedSchema).toUpperCase();
+    public String escapeDatabaseObject(String catalogName, String schemaName, String objectName, Class<? extends DatabaseObject> objectType) {
+        return super.escapeDatabaseObject(null, schemaName, objectName, objectType);
     }
 
     @Override
-    public String escapeDatabaseObject(String objectName) {
+    public String escapeDatabaseObject(String objectName, Class<? extends DatabaseObject> objectType) {
     	if (objectName != null) {
             if (keywords.contains(objectName.toUpperCase())) {
                 return "\""+objectName+"\"";

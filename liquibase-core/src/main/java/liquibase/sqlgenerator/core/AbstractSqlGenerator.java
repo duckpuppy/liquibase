@@ -13,7 +13,7 @@ public abstract class AbstractSqlGenerator<StatementType extends SqlStatement> i
         return PRIORITY_DEFAULT;
     }
 
-    public boolean requiresUpdatedDatabaseMetadata(Database database) {
+    public boolean queriesDatabase(Database database) {
         return false;
     }
 
@@ -24,4 +24,9 @@ public abstract class AbstractSqlGenerator<StatementType extends SqlStatement> i
     public Warnings warn(StatementType statementType, Database database, SqlGeneratorChain sqlGeneratorChain) {
         return sqlGeneratorChain.warn(statementType, database);
     }
+
+    public boolean looksLikeFunctionCall(String value, Database database) {
+        return value.startsWith("\"SYSIBM\"") || value.startsWith("to_date(") || value.equalsIgnoreCase(database.getCurrentDateTimeFunction());
+    }
+
 }

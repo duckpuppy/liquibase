@@ -1,7 +1,10 @@
 package liquibase.change.core;
 
+import liquibase.change.DatabaseChange;
+import liquibase.change.ChangeMetaData;
+import liquibase.change.DatabaseChangeProperty;
 import liquibase.database.Database;
-import liquibase.database.typeconversion.TypeConverterFactory;
+import liquibase.datatype.DataTypeFactory;
 import liquibase.exception.RollbackImpossibleException;
 import liquibase.exception.UnsupportedChangeException;
 import liquibase.exception.LiquibaseException;
@@ -11,21 +14,11 @@ import liquibase.statement.core.InsertOrUpdateStatement;
 import liquibase.statement.core.InsertStatement;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
+@DatabaseChange(name="loadUpdateData", description = "Smart Load Data", priority = ChangeMetaData.PRIORITY_DEFAULT, appliesTo = "table")
 public class LoadUpdateDataChange extends LoadDataChange {
     private String primaryKey;
-
-    @Override
-    public SqlStatement[] generateStatements(Database database) {
-        return super.generateStatements(database);    //To change body of overridden methods use File | Settings | File Templates.
-    }
-
-    public LoadUpdateDataChange() {
-        super("loadUpdateData", "Smart Load Data");
-    }
-
 
     public void setPrimaryKey(String primaryKey) throws LiquibaseException {
         if (primaryKey == null) {
@@ -34,13 +27,14 @@ public class LoadUpdateDataChange extends LoadDataChange {
         this.primaryKey = primaryKey;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getPrimaryKey() {
         return primaryKey;
     }
 
     @Override
-    protected InsertStatement createStatement(String schemaName, String tableName) {
-        return new InsertOrUpdateStatement(schemaName, tableName, this.primaryKey);
+    protected InsertStatement createStatement(String catalogName, String schemaName, String tableName) {
+        return new InsertOrUpdateStatement(catalogName, schemaName, tableName, this.primaryKey);
     }
 
     @Override
@@ -50,7 +44,7 @@ public class LoadUpdateDataChange extends LoadDataChange {
 
         for(SqlStatement thisForward: forward){
             InsertOrUpdateStatement thisInsert = (InsertOrUpdateStatement)thisForward;
-            DeleteStatement delete = new DeleteStatement(getSchemaName(),getTableName());
+            DeleteStatement delete = new DeleteStatement(getCatalogName(), getSchemaName(),getTableName());
             delete.setWhereClause(getWhereClause(thisInsert,database));
             statements.add(delete);
         }
@@ -59,29 +53,15 @@ public class LoadUpdateDataChange extends LoadDataChange {
     }
 
     private String getWhereClause(InsertOrUpdateStatement insertOrUpdateStatement, Database database) {
-        StringBuffer where = new StringBuffer();
+        StringBuilder where = new StringBuilder();
 
         String[] pkColumns = insertOrUpdateStatement.getPrimaryKey().split(",");
 
         for(String thisPkColumn:pkColumns)
         {
-            where.append(database.escapeColumnName(insertOrUpdateStatement.getSchemaName(), insertOrUpdateStatement.getTableName(), thisPkColumn)  + " = " );
+            where.append(database.escapeColumnName(insertOrUpdateStatement.getCatalogName(), insertOrUpdateStatement.getSchemaName(), insertOrUpdateStatement.getTableName(), thisPkColumn)).append(" = ");
             Object newValue = insertOrUpdateStatement.getColumnValues().get(thisPkColumn);
-            if (newValue == null || newValue.toString().equals("NULL")) {
-                where.append("NULL");
-            } else if (newValue instanceof String && database.shouldQuoteValue(((String) newValue))) {
-                where.append("'").append(database.escapeStringForDatabase((String) newValue)).append("'");
-            } else if (newValue instanceof Date) {
-                where.append(database.getDateLiteral(((Date) newValue)));
-            } else if (newValue instanceof Boolean) {
-                if (((Boolean) newValue)) {
-                    where.append(TypeConverterFactory.getInstance().findTypeConverter(database).getBooleanType().getTrueBooleanValue());
-                } else {
-                    where.append(TypeConverterFactory.getInstance().findTypeConverter(database).getBooleanType().getFalseBooleanValue());
-                }
-            } else {
-                where.append(newValue);
-            }
+            where.append(DataTypeFactory.getInstance().fromObject(newValue, database).objectToSql(newValue, database));
 
             where.append(" AND ");
         }

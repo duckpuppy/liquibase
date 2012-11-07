@@ -1,8 +1,6 @@
 package liquibase.change.core;
 
-import liquibase.change.AbstractChange;
-import liquibase.change.ChangeMetaData;
-import liquibase.change.ColumnConfig;
+import liquibase.change.*;
 import liquibase.database.Database;
 import liquibase.database.core.DerbyDatabase;
 import liquibase.database.core.SQLiteDatabase;
@@ -11,7 +9,6 @@ import liquibase.database.structure.Index;
 import liquibase.exception.UnsupportedChangeException;
 import liquibase.statement.SqlStatement;
 import liquibase.statement.core.RawSqlStatement;
-import liquibase.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,8 +17,10 @@ import java.util.List;
 /**
  * Combines data from two existing columns into a new column and drops the original columns.
  */
+@DatabaseChange(name="mergeColumns", description = "Merge Column", priority = ChangeMetaData.PRIORITY_DEFAULT)
 public class MergeColumnChange extends AbstractChange {
 
+    private String catalogName;
     private String schemaName;
     private String tableName;
     private String column1Name;
@@ -30,8 +29,17 @@ public class MergeColumnChange extends AbstractChange {
     private String finalColumnName;
     private String finalColumnType;
 
-    public MergeColumnChange() {
-        super("mergeColumns", "Merge Column", ChangeMetaData.PRIORITY_DEFAULT);
+    @Override
+    public boolean supports(Database database) {
+        return supports(database) && !(database instanceof DerbyDatabase);
+    }
+
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
     public String getSchemaName() {
@@ -39,9 +47,10 @@ public class MergeColumnChange extends AbstractChange {
     }
 
     public void setSchemaName(String schemaName) {
-        this.schemaName = StringUtils.trimToNull(schemaName);
+        this.schemaName = schemaName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getTableName() {
         return tableName;
     }
@@ -50,6 +59,7 @@ public class MergeColumnChange extends AbstractChange {
         this.tableName = tableName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getColumn1Name() {
         return column1Name;
     }
@@ -66,6 +76,7 @@ public class MergeColumnChange extends AbstractChange {
         this.joinString = joinString;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getColumn2Name() {
         return column2Name;
     }
@@ -74,6 +85,7 @@ public class MergeColumnChange extends AbstractChange {
         this.column2Name = column2Name;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getFinalColumnName() {
         return finalColumnName;
     }
@@ -82,6 +94,7 @@ public class MergeColumnChange extends AbstractChange {
         this.finalColumnName = finalColumnName;
     }
 
+    @DatabaseChangeProperty(requiredForDatabase = "all")
     public String getFinalColumnType() {
         return finalColumnType;
     }
@@ -91,11 +104,9 @@ public class MergeColumnChange extends AbstractChange {
     }
 
     public SqlStatement[] generateStatements(Database database) {
-
         List<SqlStatement> statements = new ArrayList<SqlStatement>();
 
         AddColumnChange addNewColumnChange = new AddColumnChange();
-        String schemaName = getSchemaName() == null?database.getDefaultSchemaName():getSchemaName();
         addNewColumnChange.setSchemaName(schemaName);
         addNewColumnChange.setTableName(getTableName());
         ColumnConfig columnConfig = new ColumnConfig();
@@ -104,7 +115,7 @@ public class MergeColumnChange extends AbstractChange {
         addNewColumnChange.addColumn(columnConfig);
         statements.addAll(Arrays.asList(addNewColumnChange.generateStatements(database)));
 
-        String updateStatement = "UPDATE " + database.escapeTableName(schemaName, getTableName()) + " SET " + getFinalColumnName() + " = " + database.getConcatSql(getColumn1Name(), "'"+getJoinString()+"'", getColumn2Name());
+        String updateStatement = "UPDATE " + database.escapeTableName(getCatalogName(), getSchemaName(), getTableName()) + " SET " + getFinalColumnName() + " = " + database.getConcatSql(getColumn1Name(), "'"+getJoinString()+"'", getColumn2Name());
 
         statements.add(new RawSqlStatement(updateStatement));
         
@@ -141,7 +152,7 @@ public class MergeColumnChange extends AbstractChange {
         		// alter table
 				statements.addAll(SQLiteDatabase.getAlterTableStatements(
 						rename_alter_visitor,
-						database,getSchemaName(),getTableName()));
+						database,getCatalogName(), getSchemaName(),getTableName()));
     		} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -164,10 +175,6 @@ public class MergeColumnChange extends AbstractChange {
         }
         return statements.toArray(new SqlStatement[statements.size()]);
 
-    }
-
-    public SqlStatement[] generateStatements(@SuppressWarnings("unused") DerbyDatabase database) throws UnsupportedChangeException {
-        throw new UnsupportedChangeException("Derby does not currently support merging columns");
     }
 
     public String getConfirmationMessage() {

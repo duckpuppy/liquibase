@@ -2,6 +2,8 @@ package liquibase.database.core;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.structure.DatabaseObject;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 
 /**
@@ -25,10 +27,18 @@ public class FirebirdDatabase extends AbstractDatabase {
         return PRIORITY_DEFAULT;
     }
     
-    public String getTypeName() {
+    public String getShortName() {
         return "firebird";
     }
 
+    public Integer getDefaultPort() {
+        return 3050;
+    }
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "Firebird";
+    }
 
     @Override
     public boolean supportsSequences() {
@@ -58,8 +68,8 @@ public class FirebirdDatabase extends AbstractDatabase {
     }
 
     @Override
-    public boolean isSystemTable(String catalogName, String schemaName, String tableName) {
-        return tableName.startsWith("RDB$") || super.isSystemTable(catalogName, schemaName, tableName);
+    public boolean isSystemTable(Schema schema, String tableName) {
+        return tableName.startsWith("RDB$") || super.isSystemTable(schema, tableName);
     }
 
 
@@ -74,12 +84,7 @@ public class FirebirdDatabase extends AbstractDatabase {
     }
 
     @Override
-    public String convertRequestedSchemaToSchema(String requestedSchema) throws DatabaseException {
-        if (requestedSchema == null) {
-            return getDefaultDatabaseSchemaName();
-        } else {
-            return requestedSchema.toUpperCase();
-        }
+    public String correctObjectName(String objectName, Class<? extends DatabaseObject> objectType) {
+        return objectName.toUpperCase();
     }
-
 }

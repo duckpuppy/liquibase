@@ -2,6 +2,7 @@ package liquibase.database.core;
 
 import liquibase.database.AbstractDatabase;
 import liquibase.database.DatabaseConnection;
+import liquibase.database.structure.Schema;
 import liquibase.exception.DatabaseException;
 import liquibase.exception.UnexpectedLiquibaseException;
 import liquibase.executor.ExecutorService;
@@ -94,15 +95,24 @@ public class InformixDatabase extends AbstractDatabase {
 	}
 
 	@Override
-	protected Set<String> getSystemTablesAndViews() {
+	protected Set<String> getSystemViews() {
 		return systemTablesAndViews;
 	}
 
     public int getPriority() {
         return PRIORITY_DEFAULT;
     }
-    
-	@Override
+
+    @Override
+    protected String getDefaultDatabaseProductName() {
+        return "Informix";
+    }
+
+    public Integer getDefaultPort() {
+        return 1526;
+    }
+
+    @Override
     public void setConnection(DatabaseConnection connection) {
         super.setConnection(connection);
         try {
@@ -132,7 +142,7 @@ public class InformixDatabase extends AbstractDatabase {
 		return null;
 	}
 
-	public String getTypeName() {
+	public String getShortName() {
 		return "informix";
 	}
 
@@ -153,9 +163,9 @@ public class InformixDatabase extends AbstractDatabase {
 	}
 
 	@Override
-	public String getViewDefinition(String schemaName, String viewName)
-			throws DatabaseException {
-		List<Map> retList = ExecutorService.getInstance().getExecutor(this).queryForList(new GetViewDefinitionStatement(schemaName, viewName));
+	public String getViewDefinition(Schema schema, String viewName) throws DatabaseException {
+        schema = correctSchema(schema);
+		List<Map> retList = ExecutorService.getInstance().getExecutor(this).queryForList(new GetViewDefinitionStatement(schema.getCatalogName(), schema.getName(), viewName));
 		// building the view definition from the multiple rows
 		StringBuilder sb = new StringBuilder();
 		for (Map rowMap : retList) {

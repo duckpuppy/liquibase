@@ -2,8 +2,12 @@ package liquibase.snapshot.jvm;
 
 import liquibase.database.Database;
 import liquibase.database.core.MSSQLDatabase;
+import liquibase.database.structure.Column;
 import liquibase.database.structure.ForeignKeyConstraintType;
 import liquibase.exception.DatabaseException;
+
+import java.sql.SQLException;
+import java.util.Map;
 
 public class MSSQLDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerator {
     public boolean supports(Database database) {
@@ -13,17 +17,6 @@ public class MSSQLDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerato
     public int getPriority(Database database) {
         return PRIORITY_DATABASE;
     }
-
-    @Override
-    protected String convertTableNameToDatabaseTableName(String tableName) {
-        return tableName;
-    }
-
-    @Override
-    protected String convertColumnNameToDatabaseTableName(String columnName) {
-        return columnName;
-    }
-
     /**
      * The sp_fkeys stored procedure spec says that returned integer values of 0, 1 and 2 
      * translate to cascade, noAction and SetNull, which are not the values in the JDBC
@@ -45,4 +38,17 @@ public class MSSQLDatabaseSnapshotGenerator extends JdbcDatabaseSnapshotGenerato
         }
     }
 
+    @Override
+    protected Object readDefaultValue(Map<String, Object> columnMetadataResultSet, Column columnInfo, Database database) throws SQLException, DatabaseException {
+        Object defaultValue = columnMetadataResultSet.get("COLUMN_DEF");
+
+        if (defaultValue != null && defaultValue instanceof String) {
+            String newValue = null;
+            if (defaultValue.equals("(NULL)")) {
+                newValue = null;
+            }
+            columnMetadataResultSet.put("COLUMN_DEF", newValue);
+        }
+        return super.readDefaultValue(columnMetadataResultSet, columnInfo, database);
+    }
 }
